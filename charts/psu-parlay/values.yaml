@@ -1,0 +1,114 @@
+nameOverride: ""
+fullnameOverride: ""
+
+# -- Backend (Node.js/Express API)
+backend:
+  image:
+    repository: psuparlay-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+  config:
+    # Live spreads from https://the-odds-api.com — leave empty to use mock mode.
+    # Ignored when oddsApiExistingSecret is set.
+    oddsApiKey: ""
+    # Reference an existing Secret for the odds API key instead of the inline value above.
+    oddsApiExistingSecret: ""
+    oddsApiExistingSecretKey: "odds-api-key"
+    # VAPID keys for web push notifications.
+    # Generate a fresh pair with: npx web-push generate-vapid-keys
+    # Ignored when vapidExistingSecret is set.
+    vapidPublicKey: ""
+    vapidPrivateKey: ""
+    # Reference an existing Secret for VAPID keys instead of the inline values above.
+    vapidExistingSecret: ""
+    vapidPublicKeyKey: "vapid-public-key"
+    vapidPrivateKeyKey: "vapid-private-key"
+
+# -- Frontend (nginx serving the React SPA)
+frontend:
+  image:
+    repository: psuparlay-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "200m"
+  service:
+    type: NodePort
+    # Only used when type is NodePort
+    nodePort: 30080
+
+# -- PostgreSQL
+postgres:
+  # Host of your existing PostgreSQL instance.
+  # e.g. "postgres.database.svc.cluster.local" or "db.example.com"
+  host: ""
+  # Port of the postgres instance
+  port: 5432
+  # Connection credentials — must match your existing database
+  database: psuparlay
+  user: psuparlay
+  # Inline password — used to create a chart-managed Secret.
+  # Ignored when existingSecret is set.
+  password: "changeme123"
+  # Reference an existing Secret for the DB password instead of the inline value above.
+  # The chart will not create a Secret entry for the password when this is set.
+  existingSecret: ""
+  existingSecretKey: "password"
+
+  # Set to true to deploy a bundled PostgreSQL pod instead of using an external instance.
+  # When enabled, host above is ignored and the in-cluster service name is used automatically.
+  enabled: false
+
+  # Options below only apply when postgres.enabled is true.
+  image:
+    repository: postgres
+    tag: "16-alpine"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  storage: "5Gi"
+  # storageClassName: "" # uncomment to set a specific storage class
+
+# -- Secrets (change all of these before deploying)
+secrets:
+  # Inline JWT secret — used to create a chart-managed Secret.
+  # Ignored when existingSecret is set.
+  jwtSecret: "change-this-to-a-long-random-string"
+  # Reference an existing Secret for the JWT secret instead of the inline value above.
+  existingSecret: ""
+  existingSecretKey: "jwt-secret"
+
+# -- Ingress (traditional nginx-style)
+ingress:
+  enabled: false
+  className: nginx
+  host: parlay.local
+  # annotations: {}
+  # tls: []
+
+# -- HTTPRoute (Gateway API) — use this instead of ingress if your cluster runs a Gateway API controller
+httproute:
+  enabled: false
+  # One or more parentRefs pointing at your Gateway resource(s)
+  parentRefs:
+    - name: my-gateway
+      # namespace: gateway-system  # uncomment if the Gateway lives in a different namespace
+  # Hostnames the route should match — leave empty to match all hostnames on the Gateway
+  hostnames:
+    - parlay.local

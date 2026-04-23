@@ -1,0 +1,68 @@
+name: Build Helm Chart
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - "charts/**"
+      - ".github/workflows/build-helm.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "charts/**"
+      - ".github/workflows/build-helm.yml"
+
+env:
+  REGISTRY: ghcr.io
+  CHART_PATH: charts/psu-parlay
+
+jobs:
+  package-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint chart
+        run: helm lint ${{ env.CHART_PATH }}
+
+      - name: Log in to GHCR (Helm OCI)
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} \
+            --username ${{ github.actor }} \
+            --password-stdin
+
+      - name: Determine chart version
+        id: chart_version
+        run: |
+          # Use semver tag if available, otherwise append short SHA to chart version
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+          else
+            BASE=$(grep '^version:' ${{ env.CHART_PATH }}/Chart.yaml | awk '{print $2}')
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            VERSION="${BASE}-sha.${SHORT_SHA}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Package chart
+        run: |
+          helm package ${{ env.CHART_PATH }} \
+            --version ${{ steps.chart_version.outputs.version }} \
+            --destination /tmp/helm-output
+
+      - name: Push chart to GHCR
+        if: github.event_name != 'pull_request'
+        run: |
+          helm push /tmp/helm-output/*.tgz \
+            oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts

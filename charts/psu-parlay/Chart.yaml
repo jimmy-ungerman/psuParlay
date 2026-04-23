@@ -1,0 +1,6 @@
+apiVersion: v2
+name: psu-parlay
+description: Weekly college football spread parlay webapp
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
