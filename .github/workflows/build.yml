@@ -1,23 +1,33 @@
-name: Build Frontend
+name: Build
 
 on:
   push:
     branches: [main]
     tags: ["v*"]
     paths:
-      - "frontend/**"
-      - "!frontend/node_modules/**"
-      - ".github/workflows/build-frontend.yml"
+      - "src/**"
+      - "client/**"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "vite.config.js"
+      - "Dockerfile"
+      - ".github/workflows/build.yml"
   pull_request:
     branches: [main]
     paths:
-      - "frontend/**"
-      - "!frontend/node_modules/**"
-      - ".github/workflows/build-frontend.yml"
+      - "src/**"
+      - "client/**"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "vite.config.js"
+      - "Dockerfile"
+      - ".github/workflows/build.yml"
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/psu-parlay-frontend
+  IMAGE_NAME: ${{ github.repository_owner }}/psu-parlay
 
 jobs:
   build:
@@ -57,7 +67,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend
+          context: .
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

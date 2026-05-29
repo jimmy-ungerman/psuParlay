@@ -11,6 +11,10 @@ spec:
     app.kubernetes.io/name: {{ include "psu-parlay.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: backend
+  type: {{ .Values.backend.service.type }}
   ports:
     - port: 3001
       targetPort: 3001
+      {{- if and (eq .Values.backend.service.type "NodePort") .Values.backend.service.nodePort }}
+      nodePort: {{ .Values.backend.service.nodePort }}
+      {{- end }}

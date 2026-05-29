@@ -23,7 +23,7 @@ router.post('/login', async (req, res) => {
     }
 
     setAuthCookie(res, signToken(user));
-    res.json({ user: { id: user.id, username: user.username, isAdmin: user.is_admin } });
+    res.json({ user: { id: user.id, username: user.username, isAdmin: !!user.is_admin } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -49,8 +49,8 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    const { rows: existing } = await pool.query('SELECT COUNT(*) FROM users');
-    const isFirstUser = existing[0].count === '0';
+    const { rows: existing } = await pool.query('SELECT COUNT(*) as count FROM users');
+    const isFirstUser = existing[0].count === 0;
 
     if (!isFirstUser) {
       // Validate invite token
@@ -66,22 +66,22 @@ router.post('/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
     const { rows: users } = await pool.query(
       'INSERT INTO users (username, password_hash, is_admin) VALUES ($1, $2, $3) RETURNING *',
-      [username.trim(), passwordHash, isFirstUser]
+      [username.trim(), passwordHash, isFirstUser ? 1 : 0]
     );
     const user = users[0];
 
     // Mark invite as used
     if (!isFirstUser) {
       await pool.query(
-        'UPDATE invites SET used_by = $1, used_at = NOW() WHERE token = $2',
+        'UPDATE invites SET used_by = $1, used_at = CURRENT_TIMESTAMP WHERE token = $2',
         [user.id, inviteToken]
       );
     }
 
     setAuthCookie(res, signToken(user));
-    res.status(201).json({ user: { id: user.id, username: user.username, isAdmin: user.is_admin } });
+    res.status(201).json({ user: { id: user.id, username: user.username, isAdmin: !!user.is_admin } });
   } catch (err) {
-    if (err.code === '23505') return res.status(409).json({ error: 'Username already taken' });
+    if (err.message?.includes('UNIQUE constraint failed')) return res.status(409).json({ error: 'Username already taken' });
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   }

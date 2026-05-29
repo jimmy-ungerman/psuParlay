@@ -19,6 +19,6 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: {{ include "psu-parlay.frontend.fullname" . }}
-          port: 80
+        - name: {{ include "psu-parlay.backend.fullname" . }}
+          port: 3001
 {{- end }}

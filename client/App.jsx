@@ -20,6 +20,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<RedirectIfAuthed><LoginPage /></RedirectIfAuthed>} />
+      <Route path="/register" element={<RedirectIfAuthed><RegisterPage /></RedirectIfAuthed>} />
       <Route path="/invite/:token" element={<RedirectIfAuthed><RegisterPage /></RedirectIfAuthed>} />
       <Route path="/" element={<RequireAuth><HomePage /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />

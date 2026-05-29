@@ -7,6 +7,10 @@ backend:
     repository: psuparlay-backend
     tag: latest
     pullPolicy: IfNotPresent
+  service:
+    type: NodePort
+    # Only used when type is NodePort
+    nodePort: 30080
   resources:
     requests:
       memory: "128Mi"
@@ -31,59 +35,13 @@ backend:
     vapidPublicKeyKey: "vapid-public-key"
     vapidPrivateKeyKey: "vapid-private-key"
 
-# -- Frontend (nginx serving the React SPA)
-frontend:
-  image:
-    repository: psuparlay-frontend
-    tag: latest
-    pullPolicy: IfNotPresent
-  resources:
-    requests:
-      memory: "64Mi"
-      cpu: "50m"
-    limits:
-      memory: "128Mi"
-      cpu: "200m"
-  service:
-    type: NodePort
-    # Only used when type is NodePort
-    nodePort: 30080
-
-# -- PostgreSQL
-postgres:
-  # Host of your existing PostgreSQL instance.
-  # e.g. "postgres.database.svc.cluster.local" or "db.example.com"
-  host: ""
-  # Port of the postgres instance
-  port: 5432
-  # Connection credentials — must match your existing database
-  database: psuparlay
-  user: psuparlay
-  # Inline password — used to create a chart-managed Secret.
-  # Ignored when existingSecret is set.
-  password: "changeme123"
-  # Reference an existing Secret for the DB password instead of the inline value above.
-  # The chart will not create a Secret entry for the password when this is set.
-  existingSecret: ""
-  existingSecretKey: "password"
-
-  # Set to true to deploy a bundled PostgreSQL pod instead of using an external instance.
-  # When enabled, host above is ignored and the in-cluster service name is used automatically.
-  enabled: false
-
-  # Options below only apply when postgres.enabled is true.
-  image:
-    repository: postgres
-    tag: "16-alpine"
-  resources:
-    requests:
-      memory: "256Mi"
-      cpu: "100m"
-    limits:
-      memory: "512Mi"
-      cpu: "500m"
-  storage: "5Gi"
+# -- SQLite
+sqlite:
+  # Size of the PersistentVolumeClaim used to store the database file.
+  storage: "1Gi"
   # storageClassName: "" # uncomment to set a specific storage class
+  # Path inside the container where the database file will be stored.
+  dbPath: "/data/psuparlay.db"
 
 # -- Secrets (change all of these before deploying)
 secrets:

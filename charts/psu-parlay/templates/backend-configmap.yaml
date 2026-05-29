@@ -8,8 +8,5 @@ metadata:
     app.kubernetes.io/component: backend
 data:
   PORT: "3001"
-  DB_HOST: {{ include "psu-parlay.postgres.host" . | quote }}
-  DB_PORT: {{ .Values.postgres.port | toString | quote }}
-  DB_NAME: {{ .Values.postgres.database | quote }}
-  DB_USER: {{ .Values.postgres.user | quote }}
+  DB_PATH: {{ .Values.sqlite.dbPath | quote }}
   NODE_ENV: "production"

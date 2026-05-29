@@ -15,6 +15,10 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (!token) {
+      setTokenValid(true);
+      return;
+    }
     api.validateInvite(token)
       .then(res => {
         setTokenValid(true);

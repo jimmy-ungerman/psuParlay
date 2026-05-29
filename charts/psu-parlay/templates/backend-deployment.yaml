@@ -36,10 +36,6 @@ spec:
                   fieldPath: status.hostIP
             - name: CORS_ORIGIN
               value: {{ include "psu-parlay.corsOrigin" . | quote }}
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  {{- include "psu-parlay.secretRef.dbPassword" . | nindent 18 }}
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
@@ -56,6 +52,9 @@ spec:
               valueFrom:
                 secretKeyRef:
                   {{- include "psu-parlay.secretRef.oddsApiKey" . | nindent 18 }}
+          volumeMounts:
+            - name: sqlite-data
+              mountPath: /data
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
           livenessProbe:
@@ -64,3 +63,7 @@ spec:
               port: 3001
             initialDelaySeconds: 10
             periodSeconds: 30
+      volumes:
+        - name: sqlite-data
+          persistentVolumeClaim:
+            claimName: {{ include "psu-parlay.backend.fullname" . }}-sqlite-pvc

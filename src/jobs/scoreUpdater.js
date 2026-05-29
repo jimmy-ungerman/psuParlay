@@ -38,7 +38,7 @@ async function updateScores() {
     if (!game) continue;
 
     await pool.query(
-      `UPDATE games SET status = $1, home_score = $2, away_score = $3, updated_at = NOW() WHERE id = $4`,
+      `UPDATE games SET status = $1, home_score = $2, away_score = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4`,
       [live.status, live.homeScore, live.awayScore, game.id]
     );
 
@@ -120,7 +120,7 @@ async function refreshRealSpreads() {
     const newSpread = match.homeSpread;
     if (parseFloat(newSpread) === parseFloat(game.home_spread)) continue;
 
-    await pool.query(`UPDATE games SET home_spread = $1, updated_at = NOW() WHERE id = $2`, [newSpread, game.id]);
+    await pool.query(`UPDATE games SET home_spread = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [newSpread, game.id]);
     await pool.query(`INSERT INTO odds_snapshots (game_id, home_spread) VALUES ($1, $2)`, [game.id, newSpread]);
     console.log(`Spread updated: ${game.home_team} vs ${game.away_team}: ${game.home_spread} → ${newSpread}`);
   }
@@ -134,7 +134,7 @@ async function simulateLineMovement() {
   for (const game of games) {
     if (Math.random() > 0.2) continue;
     const newSpread = fluctuateSpread(parseFloat(game.home_spread));
-    await pool.query(`UPDATE games SET home_spread = $1, updated_at = NOW() WHERE id = $2`, [newSpread, game.id]);
+    await pool.query(`UPDATE games SET home_spread = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [newSpread, game.id]);
     await pool.query(`INSERT INTO odds_snapshots (game_id, home_spread) VALUES ($1, $2)`, [game.id, newSpread]);
   }
 }

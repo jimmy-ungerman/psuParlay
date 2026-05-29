@@ -1,19 +1,17 @@
-{{- if .Values.postgres.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "psu-parlay.postgres.fullname" . }}-pvc
+  name: {{ include "psu-parlay.backend.fullname" . }}-sqlite-pvc
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "psu-parlay.labels" . | nindent 4 }}
-    app.kubernetes.io/component: postgres
+    app.kubernetes.io/component: backend
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: {{ .Values.postgres.storage | quote }}
-  {{- with .Values.postgres.storageClassName }}
+      storage: {{ .Values.sqlite.storage | quote }}
+  {{- with .Values.sqlite.storageClassName }}
   storageClassName: {{ . | quote }}
   {{- end }}
-{{- end }}

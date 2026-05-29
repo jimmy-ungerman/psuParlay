@@ -2,6 +2,8 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { initDb } from './db/index.js';
 import { startScoreUpdater } from './jobs/scoreUpdater.js';
 import authRoutes from './routes/auth.js';
@@ -15,12 +17,13 @@ import userRoutes from './routes/users.js';
 import statsRoutes from './routes/stats.js';
 import pushRoutes from './routes/push.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  credentials: true, // required for cookies
+  credentials: true,
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -38,11 +41,16 @@ app.use('/api/push', pushRoutes);
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
+// Serve the built frontend
+const distDir = join(__dirname, '../dist');
+app.use(express.static(distDir));
+app.get('*', (_, res) => res.sendFile(join(distDir, 'index.html')));
+
 async function start() {
   try {
     await initDb();
     startScoreUpdater();
-    app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
+    app.listen(PORT, () => console.log(`App running on port ${PORT}`));
   } catch (err) {
     console.error('Failed to start:', err);
     process.exit(1);

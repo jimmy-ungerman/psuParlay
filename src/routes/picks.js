@@ -83,7 +83,7 @@ router.post('/', requireAuth, async (req, res) => {
       `INSERT INTO picks (user_id, game_id, week_number, season, picked_team, spread_at_pick)
        VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (user_id, week_number, season)
-       DO UPDATE SET game_id = $2, picked_team = $5, spread_at_pick = $6, result = 'pending', created_at = NOW()
+       DO UPDATE SET game_id = $2, picked_team = $5, spread_at_pick = $6, result = 'pending', created_at = CURRENT_TIMESTAMP
        RETURNING *`,
       [req.user.userId, gameId, game.week_number, game.season, pickedTeam, spreadAtPick]
     );

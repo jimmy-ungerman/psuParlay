@@ -52,7 +52,7 @@ router.post('/', requireAuth, async (req, res) => {
     // Upsert — add or switch emoji
     await pool.query(
       `INSERT INTO reactions (pick_id, user_id, emoji) VALUES ($1, $2, $3)
-       ON CONFLICT (pick_id, user_id) DO UPDATE SET emoji = $3, created_at = NOW()`,
+       ON CONFLICT (pick_id, user_id) DO UPDATE SET emoji = $3, created_at = CURRENT_TIMESTAMP`,
       [pickId, req.user.userId, emoji]
     );
 

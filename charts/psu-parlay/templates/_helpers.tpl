@@ -48,16 +48,8 @@ app.kubernetes.io/component: {{ . | quote }}
 {{- end }}
 
 {{/* Per-component fully qualified names */}}
-{{- define "psu-parlay.postgres.fullname" -}}
-{{- printf "%s-postgres" (include "psu-parlay.fullname" .) }}
-{{- end }}
-
 {{- define "psu-parlay.backend.fullname" -}}
 {{- printf "%s-backend" (include "psu-parlay.fullname" .) }}
-{{- end }}
-
-{{- define "psu-parlay.frontend.fullname" -}}
-{{- printf "%s-frontend" (include "psu-parlay.fullname" .) }}
 {{- end }}
 
 {{/*
@@ -66,22 +58,12 @@ Each helper returns the `name` and `key` lines ready to drop under `secretKeyRef
 When an existingSecret is supplied the chart-managed secret is bypassed entirely.
 */}}
 
-{{- define "psu-parlay.secretRef.dbPassword" -}}
-{{- if .Values.postgres.existingSecret }}
-name: {{ .Values.postgres.existingSecret }}
-key: {{ .Values.postgres.existingSecretKey | default "password" }}
-{{- else }}
-name: {{ include "psu-parlay.postgres.fullname" . }}-secret
-key: POSTGRES_PASSWORD
-{{- end }}
-{{- end }}
-
 {{- define "psu-parlay.secretRef.jwtSecret" -}}
 {{- if .Values.secrets.existingSecret }}
 name: {{ .Values.secrets.existingSecret }}
 key: {{ .Values.secrets.existingSecretKey | default "jwt-secret" }}
 {{- else }}
-name: {{ include "psu-parlay.postgres.fullname" . }}-secret
+name: {{ include "psu-parlay.backend.fullname" . }}-secret
 key: JWT_SECRET
 {{- end }}
 {{- end }}
@@ -132,19 +114,7 @@ Resolve the CORS origin the backend will trust.
 {{- else if .Values.httproute.enabled }}
 {{- printf "https://%s" (first .Values.httproute.hostnames) }}
 {{- else }}
-{{- printf "http://$(NODE_IP):%v" .Values.frontend.service.nodePort }}
+{{- printf "http://$(NODE_IP):%v" .Values.backend.service.nodePort }}
 {{- end }}
 {{- end }}
 
-{{/*
-Resolve the postgres hostname the backend should connect to.
-When postgres.enabled is true, use the in-cluster service name.
-When false, use the user-supplied external host.
-*/}}
-{{- define "psu-parlay.postgres.host" -}}
-{{- if .Values.postgres.enabled }}
-{{- include "psu-parlay.postgres.fullname" . }}
-{{- else }}
-{{- required "postgres.host is required when postgres.enabled is false" .Values.postgres.host }}
-{{- end }}
-{{- end }}

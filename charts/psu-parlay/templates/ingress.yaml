@@ -22,9 +22,9 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "psu-parlay.frontend.fullname" . }}
+                name: {{ include "psu-parlay.backend.fullname" . }}
                 port:
-                  number: 80
+                  number: 3001
   {{- with .Values.ingress.tls }}
   tls:
     {{- toYaml . | nindent 4 }}
