@@ -14,14 +14,16 @@ db.exec('PRAGMA foreign_keys = ON');
 // Thin wrapper that mimics the pg pool.query({ rows }) interface.
 // Translates $1/$2/... positional params to SQLite's ? style.
 export function query(sql, params = []) {
-  const normalized = sql.replace(/\$\d+/g, '?');
+  const normalized = sql.replace(/\$(\d+)/g, '@p$1');
+  const namedParams = {};
+  params.forEach((val, i) => { namedParams[`p${i + 1}`] = val; });
   const stmt = db.prepare(normalized);
   const isRead = /^\s*SELECT\b/i.test(normalized) || /\bRETURNING\b/i.test(normalized);
   if (isRead) {
-    const rows = stmt.all(...params);
+    const rows = stmt.all(namedParams);
     return { rows };
   }
-  stmt.run(...params);
+  stmt.run(namedParams);
   return { rows: [] };
 }
 
