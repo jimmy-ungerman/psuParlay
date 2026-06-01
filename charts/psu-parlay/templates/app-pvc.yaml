@@ -1,17 +1,16 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "psu-parlay.backend.fullname" . }}-sqlite-pvc
+  name: {{ include "psu-parlay.app.fullname" . }}-pvc
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "psu-parlay.labels" . | nindent 4 }}
-    app.kubernetes.io/component: backend
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: {{ .Values.sqlite.storage | quote }}
-  {{- with .Values.sqlite.storageClassName }}
+      storage: {{ .Values.app.storage | quote }}
+  {{- with .Values.app.storageClassName }}
   storageClassName: {{ . | quote }}
   {{- end }}

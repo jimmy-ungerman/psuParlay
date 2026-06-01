@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import pool from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
-import { sendPushToAll } from '../services/push.js';
-
 const router = Router();
 
 // GET /api/comments?week=&season=
@@ -41,12 +39,6 @@ router.post('/', requireAuth, async (req, res) => {
        RETURNING *`,
       [weekNumber, season, req.user.userId, trimmed]
     );
-    const preview = trimmed.length > 60 ? trimmed.slice(0, 57) + '...' : trimmed;
-    sendPushToAll(
-      { title: `💬 ${req.user.username}`, body: preview },
-      req.user.userId,
-    ).catch(() => {});
-
     res.status(201).json({ comment: { ...rows[0], username: req.user.username } });
   } catch (err) {
     console.error(err);

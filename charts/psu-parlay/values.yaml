@@ -1,16 +1,15 @@
 nameOverride: ""
 fullnameOverride: ""
 
-# -- Backend (Node.js/Express API)
-backend:
+# -- App
+app:
   image:
-    repository: psuparlay-backend
+    repository: ghcr.io/jimmy-ungerman/psu-parlay
     tag: latest
     pullPolicy: IfNotPresent
   service:
-    type: NodePort
-    # Only used when type is NodePort
-    nodePort: 30080
+    type: ClusterIP
+    # nodePort: 30080 # only used when type is NodePort
   resources:
     requests:
       memory: "128Mi"
@@ -18,55 +17,16 @@ backend:
     limits:
       memory: "256Mi"
       cpu: "500m"
-  config:
-    # Live spreads from https://the-odds-api.com — leave empty to use mock mode.
-    # Ignored when oddsApiExistingSecret is set.
-    oddsApiKey: ""
-    # Reference an existing Secret for the odds API key instead of the inline value above.
-    oddsApiExistingSecret: ""
-    oddsApiExistingSecretKey: "odds-api-key"
-    # VAPID keys for web push notifications.
-    # Generate a fresh pair with: npx web-push generate-vapid-keys
-    # Ignored when vapidExistingSecret is set.
-    vapidPublicKey: ""
-    vapidPrivateKey: ""
-    # Reference an existing Secret for VAPID keys instead of the inline values above.
-    vapidExistingSecret: ""
-    vapidPublicKeyKey: "vapid-public-key"
-    vapidPrivateKeyKey: "vapid-private-key"
-
-# -- SQLite
-sqlite:
-  # Size of the PersistentVolumeClaim used to store the database file.
+  # Size of the PersistentVolumeClaim for the SQLite database
   storage: "1Gi"
   # storageClassName: "" # uncomment to set a specific storage class
-  # Path inside the container where the database file will be stored.
-  dbPath: "/data/psuparlay.db"
+  # existingSecret: "" # name of an existing secret whose keys are injected as env vars
 
-# -- Secrets (change all of these before deploying)
-secrets:
-  # Inline JWT secret — used to create a chart-managed Secret.
-  # Ignored when existingSecret is set.
-  jwtSecret: "change-this-to-a-long-random-string"
-  # Reference an existing Secret for the JWT secret instead of the inline value above.
-  existingSecret: ""
-  existingSecretKey: "jwt-secret"
-
-# -- Ingress (traditional nginx-style)
-ingress:
-  enabled: false
-  className: nginx
-  host: parlay.local
-  # annotations: {}
-  # tls: []
-
-# -- HTTPRoute (Gateway API) — use this instead of ingress if your cluster runs a Gateway API controller
+# -- HTTPRoute (Gateway API)
 httproute:
   enabled: false
-  # One or more parentRefs pointing at your Gateway resource(s)
   parentRefs:
     - name: my-gateway
-      # namespace: gateway-system  # uncomment if the Gateway lives in a different namespace
-  # Hostnames the route should match — leave empty to match all hostnames on the Gateway
+      # namespace: gateway-system
   hostnames:
     - parlay.local

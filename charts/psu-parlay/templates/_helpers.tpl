@@ -39,82 +39,21 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
-Component-scoped selector labels.
+Fully qualified name for the app.
 */}}
-{{- define "psu-parlay.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "psu-parlay.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-app.kubernetes.io/component: {{ . | quote }}
-{{- end }}
-
-{{/* Per-component fully qualified names */}}
-{{- define "psu-parlay.backend.fullname" -}}
-{{- printf "%s-backend" (include "psu-parlay.fullname" .) }}
+{{- define "psu-parlay.app.fullname" -}}
+{{- printf "%s-app" (include "psu-parlay.fullname" .) }}
 {{- end }}
 
 {{/*
-secretKeyRef blocks for each sensitive value.
-Each helper returns the `name` and `key` lines ready to drop under `secretKeyRef:`.
-When an existingSecret is supplied the chart-managed secret is bypassed entirely.
-*/}}
-
-{{- define "psu-parlay.secretRef.jwtSecret" -}}
-{{- if .Values.secrets.existingSecret }}
-name: {{ .Values.secrets.existingSecret }}
-key: {{ .Values.secrets.existingSecretKey | default "jwt-secret" }}
-{{- else }}
-name: {{ include "psu-parlay.backend.fullname" . }}-secret
-key: JWT_SECRET
-{{- end }}
-{{- end }}
-
-{{- define "psu-parlay.secretRef.vapidPublicKey" -}}
-{{- if .Values.backend.config.vapidExistingSecret }}
-name: {{ .Values.backend.config.vapidExistingSecret }}
-key: {{ .Values.backend.config.vapidPublicKeyKey | default "vapid-public-key" }}
-{{- else }}
-name: {{ include "psu-parlay.backend.fullname" . }}-secret
-key: VAPID_PUBLIC_KEY
-{{- end }}
-{{- end }}
-
-{{- define "psu-parlay.secretRef.vapidPrivateKey" -}}
-{{- if .Values.backend.config.vapidExistingSecret }}
-name: {{ .Values.backend.config.vapidExistingSecret }}
-key: {{ .Values.backend.config.vapidPrivateKeyKey | default "vapid-private-key" }}
-{{- else }}
-name: {{ include "psu-parlay.backend.fullname" . }}-secret
-key: VAPID_PRIVATE_KEY
-{{- end }}
-{{- end }}
-
-{{- define "psu-parlay.secretRef.oddsApiKey" -}}
-{{- if .Values.backend.config.oddsApiExistingSecret }}
-name: {{ .Values.backend.config.oddsApiExistingSecret }}
-key: {{ .Values.backend.config.oddsApiExistingSecretKey | default "odds-api-key" }}
-{{- else }}
-name: {{ include "psu-parlay.backend.fullname" . }}-secret
-key: ODDS_API_KEY
-{{- end }}
-{{- end }}
-
-{{/*
-Resolve the CORS origin the backend will trust.
-  - Ingress: derived from ingress.host + tls presence
+Resolve the CORS origin.
   - HTTPRoute: derived from first httproute.hostname (always https)
-  - NodePort / fallback: http://$(NODE_IP):<nodePort> — Kubernetes resolves
-    the $(NODE_IP) substitution at pod start from the NODE_IP env var
-    injected via the Downward API.
+  - NodePort / fallback: http://$(NODE_IP):<nodePort>
 */}}
-{{- define "psu-parlay.corsOrigin" -}}
-{{- if .Values.ingress.enabled }}
-{{- $scheme := "http" }}
-{{- if .Values.ingress.tls }}{{- $scheme = "https" }}{{- end }}
-{{- printf "%s://%s" $scheme .Values.ingress.host }}
-{{- else if .Values.httproute.enabled }}
+{{- define "psu-parlay.corsOrigin" -}} }}
+{{- if .Values.httproute.enabled }}
 {{- printf "https://%s" (first .Values.httproute.hostnames) }}
 {{- else }}
-{{- printf "http://$(NODE_IP):%v" .Values.backend.service.nodePort }}
+{{- printf "http://$(NODE_IP):%v" .Values.app.service.nodePort }}
 {{- end }}
 {{- end }}
-

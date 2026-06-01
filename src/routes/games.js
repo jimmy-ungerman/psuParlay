@@ -6,10 +6,32 @@ import { fetchOddsApiGames, generateMockSpread, isMockMode, teamsMatch } from '.
 
 const router = Router();
 
+// Cache the seeding result for 5 minutes so concurrent requests and
+// rapid reloads don't hammer the ESPN or Odds APIs.
+let seedCache = null; // { result, expiresAt }
+let seedingPromise = null; // deduplicates concurrent in-flight calls
+
+async function ensureGamesSeededCached() {
+  const now = Date.now();
+  if (seedCache && now < seedCache.expiresAt) return seedCache.result;
+  // Deduplicate: if a seed is already in flight, wait for it
+  if (!seedingPromise) {
+    seedingPromise = ensureGamesSeeded().then(result => {
+      seedCache = { result, expiresAt: now + 5 * 60 * 1000 };
+      seedingPromise = null;
+      return result;
+    }).catch(err => {
+      seedingPromise = null;
+      throw err;
+    });
+  }
+  return seedingPromise;
+}
+
 // GET /api/games — returns current week's games, seeding if needed
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const { season, week } = await ensureGamesSeeded();
+    const { season, week } = await ensureGamesSeededCached();
     const { rows: games } = await pool.query(
       `SELECT g.*,
         (SELECT home_spread FROM odds_snapshots WHERE game_id = g.id ORDER BY recorded_at ASC LIMIT 1) as opening_spread

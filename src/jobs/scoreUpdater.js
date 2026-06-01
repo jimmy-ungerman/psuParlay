@@ -3,8 +3,6 @@ import pool from '../db/index.js';
 import { fetchLiveScores } from '../services/espn.js';
 import { calculateResult } from '../services/results.js';
 import { fetchOddsApiGames, fluctuateSpread, isMockMode, teamsMatch } from '../services/odds.js';
-import { sendPushToUser, sendPushToAll } from '../services/push.js';
-
 // Every 15 min: update scores and resolve picks
 // Every 6 hours: refresh spreads from The Odds API (or simulate movement in mock mode)
 export function startScoreUpdater() {
@@ -45,21 +43,6 @@ async function updateScores() {
     const wasScheduled = game.status === 'scheduled';
     const updatedGame = { ...game, status: live.status, home_score: live.homeScore, away_score: live.awayScore };
 
-    if (live.status === 'in_progress' && wasScheduled) {
-      // Notify pick owners that their game just went live
-      const { rows: picks } = await pool.query(
-        'SELECT p.user_id, p.picked_team FROM picks p WHERE p.game_id = $1',
-        [game.id]
-      );
-      for (const pick of picks) {
-        const team = pick.picked_team === 'home' ? game.home_team : game.away_team;
-        sendPushToUser(pick.user_id, {
-          title: '🔴 Your game is live!',
-          body: `${game.home_team} vs ${game.away_team} — you picked ${team}`,
-        }).catch(() => {});
-      }
-    }
-
     if (live.status === 'complete') {
       await resolvePicksForGame(updatedGame);
     }
@@ -78,29 +61,6 @@ async function resolvePicksForGame(game) {
     }
   }
 
-  // Check if all picks for this week/season are now settled — notify everyone
-  if (picks.length > 0) {
-    const { week_number, season } = game;
-    const { rows: remaining } = await pool.query(
-      `SELECT COUNT(*) as cnt FROM picks WHERE week_number = $1 AND season = $2 AND result = 'pending'`,
-      [week_number, season]
-    );
-    if (parseInt(remaining[0].cnt) === 0) {
-      const { rows: weekPicks } = await pool.query(
-        `SELECT result FROM picks WHERE week_number = $1 AND season = $2`,
-        [week_number, season]
-      );
-      const wins = weekPicks.filter(p => p.result === 'win').length;
-      const total = weekPicks.length;
-      const parlayWon = weekPicks.every(p => p.result === 'win');
-      const parlayLost = weekPicks.some(p => p.result === 'loss');
-      const outcome = parlayWon ? '🎉 Parlay Hit!' : parlayLost ? '💀 Parlay Busted' : '😬 Parlay Pushes';
-      sendPushToAll({
-        title: `Week ${week_number} Results Are In`,
-        body: `${outcome} — ${wins}/${total} covered`,
-      }).catch(() => {});
-    }
-  }
 }
 
 async function refreshRealSpreads() {

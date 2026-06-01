@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import pool from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
-import { sendPushToUser } from '../services/push.js';
-
 const router = Router();
 const VALID_EMOJIS = new Set(['🔥', '💀', '🤡', '🐐', '💸', '😬']);
 
@@ -55,22 +53,6 @@ router.post('/', requireAuth, async (req, res) => {
        ON CONFLICT (pick_id, user_id) DO UPDATE SET emoji = $3, created_at = CURRENT_TIMESTAMP`,
       [pickId, req.user.userId, emoji]
     );
-
-    // Notify the pick owner (not yourself)
-    const { rows: pickRows } = await pool.query(
-      `SELECT p.user_id, u.username as picker_name, g.home_team, g.away_team, p.picked_team
-       FROM picks p JOIN users u ON p.user_id = u.id JOIN games g ON p.game_id = g.id
-       WHERE p.id = $1`,
-      [pickId]
-    );
-    if (pickRows.length > 0 && pickRows[0].user_id !== req.user.userId) {
-      const { user_id, picker_name, home_team, away_team, picked_team } = pickRows[0];
-      const team = picked_team === 'home' ? home_team : away_team;
-      sendPushToUser(user_id, {
-        title: `${emoji} ${req.user.username} reacted to your pick`,
-        body: `${picker_name} picked ${team}`,
-      }).catch(() => {});
-    }
 
     res.json({ action: existing.length > 0 ? 'switched' : 'added' });
   } catch (err) {

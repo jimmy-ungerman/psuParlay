@@ -52,12 +52,4 @@ export const api = {
   getUsers: () => request('GET', '/users'),
   getParlayRecord: () => request('GET', '/stats/parlay-record'),
   getH2H: (userId) => request('GET', `/stats/h2h/${userId}`),
-
-  // Push notifications
-  getVapidPublicKey: () => request('GET', '/push/vapid-public-key'),
-  savePushSubscription: (subscription) => request('POST', '/push/subscribe', {
-    endpoint: subscription.endpoint,
-    keys: { p256dh: subscription.toJSON().keys.p256dh, auth: subscription.toJSON().keys.auth },
-  }),
-  deletePushSubscription: (endpoint) => request('DELETE', '/push/subscribe', { endpoint }),
 };

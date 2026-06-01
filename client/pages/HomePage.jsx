@@ -5,19 +5,9 @@ import ParlayCard from '../components/ParlayCard.jsx';
 import Leaderboard from '../components/Leaderboard.jsx';
 import History from '../components/History.jsx';
 import AdminPanel from '../components/AdminPanel.jsx';
-import NotificationPrompt from '../components/NotificationPrompt.jsx';
-
 export default function HomePage() {
   const { user, logout } = useAuth();
   const [tab, setTab] = useState('Pick');
-
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(err => {
-        console.error('SW registration failed:', err);
-      });
-    }
-  }, []);
 
   const tabs = ['Pick', 'Parlay', 'Standings', 'History', ...(user?.isAdmin ? ['Admin'] : [])];
 
@@ -55,8 +45,6 @@ export default function HomePage() {
           ))}
         </div>
       </nav>
-
-      <NotificationPrompt />
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto">

@@ -2,8 +2,6 @@ import { Router } from 'express';
 import pool from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { spreadForTeam } from '../services/results.js';
-import { sendPushToAll } from '../services/push.js';
-
 const router = Router();
 
 // GET /api/picks?week=&season=
@@ -87,13 +85,6 @@ router.post('/', requireAuth, async (req, res) => {
        RETURNING *`,
       [req.user.userId, gameId, game.week_number, game.season, pickedTeam, spreadAtPick]
     );
-
-    const pickedTeamName = pickedTeam === 'home' ? game.home_team : game.away_team;
-    const spread = spreadAtPick > 0 ? `+${spreadAtPick}` : `${spreadAtPick}`;
-    sendPushToAll(
-      { title: '🏈 New Pick Locked In', body: `${req.user.username} took ${pickedTeamName} ${spread}` },
-      req.user.userId,
-    ).catch(() => {});
 
     res.status(201).json({ pick: pick[0] });
   } catch (err) {
