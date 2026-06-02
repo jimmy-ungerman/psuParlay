@@ -72,6 +72,20 @@ export async function initDb() {
     }
   }
 
+  // Migration: consensus_votes table
+  const cvTables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='consensus_votes'`).all();
+  if (cvTables.length === 0) {
+    db.exec(`CREATE TABLE IF NOT EXISTS consensus_votes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      week_number INTEGER NOT NULL,
+      season INTEGER NOT NULL,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      vote TEXT NOT NULL CHECK(vote IN ('yes', 'no')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(week_number, season, user_id)
+    )`);
+  }
+
   // Seed default admin user if configured and no users exist yet
   const seedUsername = process.env.SEED_ADMIN_USERNAME;
   const seedPassword = process.env.SEED_ADMIN_PASSWORD;
