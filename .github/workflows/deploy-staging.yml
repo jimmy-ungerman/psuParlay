@@ -1,7 +1,9 @@
 name: Deploy to Staging
 
 on:
-  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
 
 env:
   REGISTRY: ghcr.io
@@ -38,22 +40,34 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging-${{ steps.sha.outputs.short }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Update staging HelmRelease in GitOps repo
+      - name: Update staging manifests in GitOps repo
         env:
           GITOPS_PAT: ${{ secrets.GITOPS_PAT }}
-          IMAGE_TAG: staging-${{ steps.sha.outputs.short }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          IMAGE_TAG: pr-${{ github.event.pull_request.number }}
           IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
           git clone https://x-access-token:${GITOPS_PAT}@github.com/jimmy-ungerman/pork3s.git /tmp/pork3s
           cd /tmp/pork3s
+
+          RESOURCE_NAME="psu-parlay-pr-${PR_NUMBER}"
+
+          yq e ".metadata.name = \"${RESOURCE_NAME}\"" \
+            -i kubernetes/apps/staging/psu-parlay/ks.yaml
+          yq e '.spec.suspend = false' \
+            -i kubernetes/apps/staging/psu-parlay/ks.yaml
+
+          yq e ".metadata.name = \"${RESOURCE_NAME}\"" \
+            -i kubernetes/apps/staging/psu-parlay/app/helmrelease.yaml
           yq e ".spec.values.app.image.tag = \"${IMAGE_TAG}@${IMAGE_DIGEST}\"" \
             -i kubernetes/apps/staging/psu-parlay/app/helmrelease.yaml
-          git add kubernetes/apps/staging/psu-parlay/app/helmrelease.yaml
-          git diff --cached --quiet || git commit -m "chore: deploy psu-parlay staging ${IMAGE_TAG}"
+
+          git add kubernetes/apps/staging/psu-parlay/
+          git diff --cached --quiet || git commit -m "chore: deploy psu-parlay ${RESOURCE_NAME}"
           git push

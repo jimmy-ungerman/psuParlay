@@ -1,0 +1,30 @@
+name: Teardown Staging
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+jobs:
+  teardown-staging:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Suspend staging Kustomization in GitOps repo
+        env:
+          GITOPS_PAT: ${{ secrets.GITOPS_PAT }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git clone https://x-access-token:${GITOPS_PAT}@github.com/jimmy-ungerman/pork3s.git /tmp/pork3s
+          cd /tmp/pork3s
+
+          yq e '.spec.suspend = true' \
+            -i kubernetes/apps/staging/psu-parlay/ks.yaml
+
+          git add kubernetes/apps/staging/psu-parlay/ks.yaml
+          git diff --cached --quiet || git commit -m "chore: suspend psu-parlay staging pr-${PR_NUMBER}"
+          git push
