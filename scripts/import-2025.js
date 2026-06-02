@@ -116,48 +116,48 @@ if (!hpCols.some(c => c.name === 'canonical_team')) {
   db.exec(`ALTER TABLE historical_picks ADD COLUMN canonical_team TEXT`);
 }
 
-// CSV display name → registered username (null = unregistered)
-const USERNAME_MAP = {
+// Old spreadsheet names that have been replaced by usernames — clean these up on import
+const RENAMED = {
   'Kevin':        'Jobin69',
   'Jimmy':        'jimmy',
   'Tim':          'Boxmaster69420',
   'Grant Grasha': 'GMoney2458',
   'Steve Barker': 'SammyBigBeans',
   'Glenn Grasha': 'Glennjamin',
-  'Ryan Arzenti': null,
-  'Sundy':        null,
-  'Tanner':       null,
-  'Mitch Bacco':  null,
-  'Jon':          null,
 };
+const oldNames = Object.keys(RENAMED);
+if (oldNames.length) {
+  db.prepare(`DELETE FROM historical_picks WHERE season = 2025 AND display_name IN (${oldNames.map(() => '?').join(',')})`).run(...oldNames);
+  console.log(`Cleaned up old display names: ${oldNames.join(', ')}`);
+}
 
 // Hardcoded 2025 data: [displayName, week, result, spreadValue, pickedTeam]
 const DATA = [
-  // Kevin
-  ['Kevin', 1,  'win',  27.5,  'Utah -5.5'],
-  ['Kevin', 2,  'loss', -10.5, 'UTSA -3.5'],
-  ['Kevin', 3,  'loss', -8.5,  'Auburn -24.5'],
-  ['Kevin', 4,  'win',  9.5,   'JMU -8.5'],
-  ['Kevin', 5,  'loss', -4.5,  'Marshall -1.5'],
-  ['Kevin', 6,  'loss', -10.5, 'Rice -4.5'],
-  ['Kevin', 7,  'loss', -3.5,  'UNLV -6.5'],
-  ['Kevin', 8,  'win',  3.5,   'Army +10.5'],
-  ['Kevin', 9,  'win',  19.5,  'SDSU -3.5'],
-  ['Kevin', 10, 'win',  6.5,   'Colorado +4'],
-  ['Kevin', 11, 'win',  11.5,  'Coastal -7.5'],
+  // Jobin69 (Kevin)
+  ['Jobin69', 1,  'win',  27.5,  'Utah -5.5'],
+  ['Jobin69', 2,  'loss', -10.5, 'UTSA -3.5'],
+  ['Jobin69', 3,  'loss', -8.5,  'Auburn -24.5'],
+  ['Jobin69', 4,  'win',  9.5,   'JMU -8.5'],
+  ['Jobin69', 5,  'loss', -4.5,  'Marshall -1.5'],
+  ['Jobin69', 6,  'loss', -10.5, 'Rice -4.5'],
+  ['Jobin69', 7,  'loss', -3.5,  'UNLV -6.5'],
+  ['Jobin69', 8,  'win',  3.5,   'Army +10.5'],
+  ['Jobin69', 9,  'win',  19.5,  'SDSU -3.5'],
+  ['Jobin69', 10, 'win',  6.5,   'Colorado +4'],
+  ['Jobin69', 11, 'win',  11.5,  'Coastal -7.5'],
 
-  // Jimmy
-  ['Jimmy', 1,  'win',  5.5,   'OSU -1.5'],
-  ['Jimmy', 2,  'loss', -2.5,  'Ole Miss -9.5'],
-  ['Jimmy', 3,  'win',  6.5,   'GT +3.5'],
-  ['Jimmy', 4,  'win',  8.5,   'Memphis +7.5'],
-  ['Jimmy', 5,  'loss', -3.5,  'Indiana -8.5'],
-  ['Jimmy', 6,  'win',  9.5,   'Illinois -7.5'],
-  ['Jimmy', 7,  'win',  0.5,   'Missou +3.5'],
-  ['Jimmy', 8,  'loss', -7.5,  'Tenn +9.5'],
-  ['Jimmy', 9,  'win',  4.5,   'Vandy -2.5'],
-  ['Jimmy', 10, 'win',  0.5,   'Vandy +3.5'],
-  ['Jimmy', 11, 'win',  11.5,  'Bama -10.5'],
+  // jimmy
+  ['jimmy', 1,  'win',  5.5,   'OSU -1.5'],
+  ['jimmy', 2,  'loss', -2.5,  'Ole Miss -9.5'],
+  ['jimmy', 3,  'win',  6.5,   'GT +3.5'],
+  ['jimmy', 4,  'win',  8.5,   'Memphis +7.5'],
+  ['jimmy', 5,  'loss', -3.5,  'Indiana -8.5'],
+  ['jimmy', 6,  'win',  9.5,   'Illinois -7.5'],
+  ['jimmy', 7,  'win',  0.5,   'Missou +3.5'],
+  ['jimmy', 8,  'loss', -7.5,  'Tenn +9.5'],
+  ['jimmy', 9,  'win',  4.5,   'Vandy -2.5'],
+  ['jimmy', 10, 'win',  0.5,   'Vandy +3.5'],
+  ['jimmy', 11, 'win',  11.5,  'Bama -10.5'],
 
   // Ryan Arzenti (unregistered)
   ['Ryan Arzenti', 1,  'win',  6,     'SC -7'],
@@ -181,18 +181,18 @@ const DATA = [
   ['Sundy', 9,  'win',  29.5,  'Iowa -8.5'],
   ['Sundy', 10, 'win',  9.5,   null],
 
-  // Tim
-  ['Tim', 1,  'win',  5.5,   'Ten -13.5'],
-  ['Tim', 2,  'win',  8.5,   'Memphis -13.5'],
-  ['Tim', 3,  'win',  17.5,  'Memphis -3.5'],
-  ['Tim', 4,  'win',  23.5,  'Ole Miss -11.5'],
-  ['Tim', 5,  'win',  15.5,  'Memphis -13.5'],
-  ['Tim', 6,  'win',  34.5,  'UConn -6.5'],
-  ['Tim', 7,  'loss', -15.5, 'Toledo -10.5'],
-  ['Tim', 8,  'win',  13.5,  'UCONN -1.5'],
-  ['Tim', 9,  'win',  17.5,  'Cincy -3.5'],
-  ['Tim', 10, 'loss', -13.5, 'UCONN -11.5'],
-  ['Tim', 11, 'win',  4.5,   'Wash -10.5'],
+  // Boxmaster69420 (Tim)
+  ['Boxmaster69420', 1,  'win',  5.5,   'Ten -13.5'],
+  ['Boxmaster69420', 2,  'win',  8.5,   'Memphis -13.5'],
+  ['Boxmaster69420', 3,  'win',  17.5,  'Memphis -3.5'],
+  ['Boxmaster69420', 4,  'win',  23.5,  'Ole Miss -11.5'],
+  ['Boxmaster69420', 5,  'win',  15.5,  'Memphis -13.5'],
+  ['Boxmaster69420', 6,  'win',  34.5,  'UConn -6.5'],
+  ['Boxmaster69420', 7,  'loss', -15.5, 'Toledo -10.5'],
+  ['Boxmaster69420', 8,  'win',  13.5,  'UCONN -1.5'],
+  ['Boxmaster69420', 9,  'win',  17.5,  'Cincy -3.5'],
+  ['Boxmaster69420', 10, 'loss', -13.5, 'UCONN -11.5'],
+  ['Boxmaster69420', 11, 'win',  4.5,   'Wash -10.5'],
 
   // Tanner (unregistered)
   ['Tanner', 2,  'loss', -7.5,  'PSU -41.5'],
@@ -204,18 +204,18 @@ const DATA = [
   ['Tanner', 10, 'win',  7,     'O55.5 Ole/SC'],
   ['Tanner', 11, 'win',  6,     'Stan/UNC U42.5'],
 
-  // Grant Grasha
-  ['Grant Grasha', 1,  'win',  18.5,  'Oregon -27.5'],
-  ['Grant Grasha', 2,  'loss', -0.5,  'Iowa St -3.5'],
-  ['Grant Grasha', 3,  'loss', -4.5,  'Oregon -26.5'],
-  ['Grant Grasha', 4,  'win',  27.5,  'Maryland +10.5'],
-  ['Grant Grasha', 5,  'win',  3.5,   'Ole Miss -1.5'],
-  ['Grant Grasha', 6,  'win',  2,     'Maryland +6'],
-  ['Grant Grasha', 7,  'win',  15.5,  'USC -2.5'],
-  ['Grant Grasha', 8,  'win',  6.5,   'BYU +3.5'],
-  ['Grant Grasha', 9,  'loss', -3,    'Bama -10'],
-  ['Grant Grasha', 10, 'loss', -11.5, 'Georgia -6.5'],
-  ['Grant Grasha', 11, 'loss', -1.5,  'Duke -8.5'],
+  // GMoney2458 (Grant Grasha)
+  ['GMoney2458', 1,  'win',  18.5,  'Oregon -27.5'],
+  ['GMoney2458', 2,  'loss', -0.5,  'Iowa St -3.5'],
+  ['GMoney2458', 3,  'loss', -4.5,  'Oregon -26.5'],
+  ['GMoney2458', 4,  'win',  27.5,  'Maryland +10.5'],
+  ['GMoney2458', 5,  'win',  3.5,   'Ole Miss -1.5'],
+  ['GMoney2458', 6,  'win',  2,     'Maryland +6'],
+  ['GMoney2458', 7,  'win',  15.5,  'USC -2.5'],
+  ['GMoney2458', 8,  'win',  6.5,   'BYU +3.5'],
+  ['GMoney2458', 9,  'loss', -3,    'Bama -10'],
+  ['GMoney2458', 10, 'loss', -11.5, 'Georgia -6.5'],
+  ['GMoney2458', 11, 'loss', -1.5,  'Duke -8.5'],
 
   // Mitch Bacco (unregistered)
   ['Mitch Bacco', 2,  'loss', -20.5, 'K State -17.5'],
@@ -227,31 +227,31 @@ const DATA = [
   ['Mitch Bacco', 10, 'win',  0.5,   'Minn -3.5'],
   ['Mitch Bacco', 11, 'loss', -30.5, 'WVU -6.5'],
 
-  // Steve Barker
-  ['Steve Barker', 1,  'win',  32.5,  'Iowa St -15.5'],
-  ['Steve Barker', 2,  'win',  23.5,  'Illinois -2.5'],
-  ['Steve Barker', 3,  'loss', -19.5, 'USF +17.5'],
-  ['Steve Barker', 4,  'win',  11.5,  'Miami -7.5'],
-  ['Steve Barker', 5,  'win',  9.5,   'OSU -8.5'],
-  ['Steve Barker', 6,  'loss', -6.5,  'Iowa St +1.5'],
-  ['Steve Barker', 7,  'loss', -14.5, 'OK +2.5'],
-  ['Steve Barker', 8,  'win',  12.5,  'GT +3.5'],
-  ['Steve Barker', 9,  'win',  19.5,  'BYU +2.5'],
-  ['Steve Barker', 10, 'loss', -10.5, 'ECU -4.5'],
-  ['Steve Barker', 11, 'loss', -1,    'VA -6.5'],
+  // SammyBigBeans (Steve Barker)
+  ['SammyBigBeans', 1,  'win',  32.5,  'Iowa St -15.5'],
+  ['SammyBigBeans', 2,  'win',  23.5,  'Illinois -2.5'],
+  ['SammyBigBeans', 3,  'loss', -19.5, 'USF +17.5'],
+  ['SammyBigBeans', 4,  'win',  11.5,  'Miami -7.5'],
+  ['SammyBigBeans', 5,  'win',  9.5,   'OSU -8.5'],
+  ['SammyBigBeans', 6,  'loss', -6.5,  'Iowa St +1.5'],
+  ['SammyBigBeans', 7,  'loss', -14.5, 'OK +2.5'],
+  ['SammyBigBeans', 8,  'win',  12.5,  'GT +3.5'],
+  ['SammyBigBeans', 9,  'win',  19.5,  'BYU +2.5'],
+  ['SammyBigBeans', 10, 'loss', -10.5, 'ECU -4.5'],
+  ['SammyBigBeans', 11, 'loss', -1,    'VA -6.5'],
 
-  // Glenn Grasha
-  ['Glenn Grasha', 1,  'loss', -28,   'Bama -14'],
-  ['Glenn Grasha', 2,  'loss', -5.5,  'SMU -2.5'],
-  ['Glenn Grasha', 3,  'win',  11,    'Illinois -27.5'],
-  ['Glenn Grasha', 4,  'win',  17.5,  'UCF -7.5'],
-  ['Glenn Grasha', 5,  'loss', -8.5,  'UCF +5.5'],
-  ['Glenn Grasha', 6,  'win',  23.5,  'NWestern -11.5'],
-  ['Glenn Grasha', 7,  'win',  17.5,  'Clem -13.5'],
-  ['Glenn Grasha', 8,  'loss', -4.5,  'A&M -7.5'],
-  ['Glenn Grasha', 9,  'loss', -17.5, 'Oregon -31.5'],
-  ['Glenn Grasha', 10, 'win',  0.5,   'Pitt -14'],
-  ['Glenn Grasha', 11, 'loss', -9,    'Vandy -6.5'],
+  // Glennjamin (Glenn Grasha)
+  ['Glennjamin', 1,  'loss', -28,   'Bama -14'],
+  ['Glennjamin', 2,  'loss', -5.5,  'SMU -2.5'],
+  ['Glennjamin', 3,  'win',  11,    'Illinois -27.5'],
+  ['Glennjamin', 4,  'win',  17.5,  'UCF -7.5'],
+  ['Glennjamin', 5,  'loss', -8.5,  'UCF +5.5'],
+  ['Glennjamin', 6,  'win',  23.5,  'NWestern -11.5'],
+  ['Glennjamin', 7,  'win',  17.5,  'Clem -13.5'],
+  ['Glennjamin', 8,  'loss', -4.5,  'A&M -7.5'],
+  ['Glennjamin', 9,  'loss', -17.5, 'Oregon -31.5'],
+  ['Glennjamin', 10, 'win',  0.5,   'Pitt -14'],
+  ['Glennjamin', 11, 'loss', -9,    'Vandy -6.5'],
 
   // Jon (unregistered)
   ['Jon', 1,  'loss', -1.5,  'UK -9.5'],
@@ -273,26 +273,16 @@ const insert = db.prepare(`
     canonical_team = excluded.canonical_team
 `);
 
-// Pre-resolve user IDs
+// Pre-resolve user IDs by looking up display_name directly as a username
 const userIdCache = {};
-const warned = new Set();
-for (const displayName of Object.keys(USERNAME_MAP)) {
-  const username = USERNAME_MAP[displayName];
-  if (!username) { userIdCache[displayName] = null; continue; }
-  const row = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
-  if (row) {
-    userIdCache[displayName] = row.id;
-  } else {
-    userIdCache[displayName] = null;
-    if (!warned.has(username)) {
-      console.warn(`Warning: username '${username}' not found in DB (for ${displayName})`);
-      warned.add(username);
-    }
-  }
+const unknownAbbrevs = new Set();
+const allNames = [...new Set(DATA.map(([name]) => name))];
+for (const name of allNames) {
+  const row = db.prepare('SELECT id FROM users WHERE username = ?').get(name);
+  userIdCache[name] = row?.id ?? null;
 }
 
 let inserted = 0;
-const unknownAbbrevs = new Set();
 for (const [displayName, week, result, spreadValue, pickedTeam] of DATA) {
   const canonical = pickedTeam ? canonicalize(pickedTeam) : null;
   if (pickedTeam && !canonical) {
