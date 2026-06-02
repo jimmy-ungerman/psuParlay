@@ -58,6 +58,16 @@ async function ensureGamesSeeded() {
   );
   const existingIds = new Set(existing.map(r => r.espn_id));
   const newEvents = events.filter(e => !existingIds.has(e.espnId));
+
+  // Backfill conference for any existing games that are missing it
+  const needsConference = events.filter(e => existingIds.has(e.espnId) && e.conference);
+  for (const e of needsConference) {
+    await pool.query(
+      `UPDATE games SET conference = $1 WHERE espn_id = $2 AND conference IS NULL`,
+      [e.conference, e.espnId]
+    );
+  }
+
   if (newEvents.length === 0) return { season, week };
 
   if (isMockMode()) {
@@ -75,7 +85,7 @@ async function seedWithMockSpreads(events, week, season) {
     const { rows: inserted } = await pool.query(
       `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, commence_time, week_number, season, status, conference)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-       ON CONFLICT (espn_id) DO NOTHING RETURNING id`,
+       ON CONFLICT (espn_id) DO UPDATE SET conference = excluded.conference WHERE games.conference IS NULL RETURNING id`,
       [event.espnId, event.homeTeam, event.awayTeam, event.homeAbbr, event.awayAbbr,
        spread, event.commenceTime, week, season, event.status, event.conference]
     );
@@ -104,7 +114,7 @@ async function seedWithRealOdds(events, week, season) {
     const { rows: inserted } = await pool.query(
       `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, commence_time, week_number, season, status, conference)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-       ON CONFLICT (espn_id) DO NOTHING RETURNING id`,
+       ON CONFLICT (espn_id) DO UPDATE SET conference = excluded.conference WHERE games.conference IS NULL RETURNING id`,
       [event.espnId, event.homeTeam, event.awayTeam, event.homeAbbr, event.awayAbbr,
        spread, event.commenceTime, week, season, event.status, event.conference]
     );
