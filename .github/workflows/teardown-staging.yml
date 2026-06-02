@@ -25,7 +25,7 @@ jobs:
             --password-stdin
           crane delete ghcr.io/${{ github.repository_owner }}/psu-parlay:pr-${PR_NUMBER} || true
 
-      - name: Suspend staging Kustomization in GitOps repo
+      - name: Remove HelmRelease from staging kustomization in GitOps repo
         env:
           GITOPS_PAT: ${{ secrets.GITOPS_PAT }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -35,9 +35,10 @@ jobs:
           git clone https://x-access-token:${GITOPS_PAT}@github.com/jimmy-ungerman/pork3s.git /tmp/pork3s
           cd /tmp/pork3s
 
-          yq e '.spec.suspend = true' \
-            -i kubernetes/apps/staging/psu-parlay/ks.yaml
+          # Remove helmrelease and ocirepository — Flux will prune them, uninstalling the release
+          yq e '.resources = ["./externalsecret.yaml"]' \
+            -i kubernetes/apps/staging/psu-parlay/app/kustomization.yaml
 
-          git add kubernetes/apps/staging/psu-parlay/ks.yaml
-          git diff --cached --quiet || git commit -m "chore: suspend psu-parlay staging pr-${PR_NUMBER}"
+          git add kubernetes/apps/staging/psu-parlay/app/kustomization.yaml
+          git diff --cached --quiet || git commit -m "chore: teardown psu-parlay staging pr-${PR_NUMBER}"
           git push

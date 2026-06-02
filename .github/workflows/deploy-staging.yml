@@ -60,13 +60,15 @@ jobs:
 
           yq e ".metadata.name = \"${RESOURCE_NAME}\"" \
             -i kubernetes/apps/staging/psu-parlay/ks.yaml
-          yq e '.spec.suspend = false' \
-            -i kubernetes/apps/staging/psu-parlay/ks.yaml
 
           yq e ".metadata.name = \"${RESOURCE_NAME}\"" \
             -i kubernetes/apps/staging/psu-parlay/app/helmrelease.yaml
           yq e ".spec.values.app.image.tag = \"${IMAGE_TAG}@${IMAGE_DIGEST}\"" \
             -i kubernetes/apps/staging/psu-parlay/app/helmrelease.yaml
+
+          # Ensure helmrelease and ocirepository are present alongside externalsecret
+          yq e '.resources = ["./helmrelease.yaml", "./ocirepository.yaml", "./externalsecret.yaml"]' \
+            -i kubernetes/apps/staging/psu-parlay/app/kustomization.yaml
 
           git add kubernetes/apps/staging/psu-parlay/
           git diff --cached --quiet || git commit -m "chore: deploy psu-parlay ${RESOURCE_NAME}"
