@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS historical_picks (
   spread_value REAL NOT NULL,
   picked_team TEXT,
   canonical_team TEXT,
+  game_id INTEGER REFERENCES games(id) ON DELETE SET NULL,
   UNIQUE(season, week_number, display_name)
 );
 

@@ -6,6 +6,55 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'fs';
 import { dirname } from 'path';
 
+// ── ESPN helpers ─────────────────────────────────────────────────────────────
+
+async function fetchEspnWeek(season, week) {
+  // groups=80 = FBS, limit=300 ensures we get all games in a week
+  const url = `https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates=${season}&week=${week}&seasontype=2&groups=80&limit=300`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`ESPN fetch failed: ${res.status}`);
+  const data = await res.json();
+  return (data.events || []).map(parseEspnEvent);
+}
+
+function parseEspnEvent(event) {
+  const comp = event.competitions?.[0];
+  const home = comp?.competitors?.find(c => c.homeAway === 'home');
+  const away = comp?.competitors?.find(c => c.homeAway === 'away');
+  const statusName = comp?.status?.type?.name;
+  return {
+    espnId: event.id,
+    homeTeam: home?.team?.displayName || 'TBD',
+    awayTeam: away?.team?.displayName || 'TBD',
+    homeAbbr: home?.team?.abbreviation || '???',
+    awayAbbr: away?.team?.abbreviation || '???',
+    commenceTime: event.date,
+    status: statusName === 'STATUS_FINAL' ? 'complete'
+           : statusName === 'STATUS_IN_PROGRESS' ? 'in_progress' : 'scheduled',
+    homeScore: home?.score !== undefined && home.score !== '' ? parseInt(home.score) : null,
+    awayScore: away?.score !== undefined && away.score !== '' ? parseInt(away.score) : null,
+  };
+}
+
+function normalizeTeam(name) {
+  return name.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+}
+
+function teamsMatch(a, b) {
+  const na = normalizeTeam(a);
+  const nb = normalizeTeam(b);
+  if (na === nb || na.includes(nb) || nb.includes(na)) return true;
+  // Handle abbreviated names: "App State Mountaineers" ↔ "Appalachian State"
+  // Check if first word of shorter is a prefix of first word of longer, and second words match
+  const wa = na.split(' ');
+  const wb = nb.split(' ');
+  const [shorter, longer] = wa.length <= wb.length ? [wa, wb] : [wb, wa];
+  // Check if one first-word is a prefix of the other (handles "App" ↔ "Appalachian")
+  return shorter.length >= 2 &&
+    (longer[0].startsWith(shorter[0]) || shorter[0].startsWith(longer[0])) &&
+    shorter[1] === longer[1];
+}
+
 const DB_PATH = process.env.DB_PATH || './data/psuparlay.db';
 mkdirSync(dirname(DB_PATH), { recursive: true });
 const db = new DatabaseSync(DB_PATH);
@@ -109,6 +158,7 @@ db.exec(`CREATE TABLE IF NOT EXISTS historical_picks (
   spread_value REAL NOT NULL,
   picked_team TEXT,
   canonical_team TEXT,
+  game_id INTEGER REFERENCES games(id) ON DELETE SET NULL,
   UNIQUE(season, week_number, display_name)
 )`);
 const hpCols = db.prepare(`PRAGMA table_info(historical_picks)`).all();
@@ -117,6 +167,9 @@ if (!hpCols.some(c => c.name === 'picked_team')) {
 }
 if (!hpCols.some(c => c.name === 'canonical_team')) {
   db.exec(`ALTER TABLE historical_picks ADD COLUMN canonical_team TEXT`);
+}
+if (!hpCols.some(c => c.name === 'game_id')) {
+  db.exec(`ALTER TABLE historical_picks ADD COLUMN game_id INTEGER REFERENCES games(id) ON DELETE SET NULL`);
 }
 
 // Old spreadsheet names that have been replaced by usernames — clean these up on import
@@ -301,3 +354,137 @@ for (const [displayName, week, result, spreadValue, pickedTeam] of DATA) {
 }
 
 console.log(`Imported ${inserted} historical picks for 2025.`);
+
+// ── Phase 2: Seed 2025 games from ESPN and link picks ─────────────────────────
+
+const gamesTableExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='games'`).get();
+
+if (!gamesTableExists) {
+  console.log('Games table not found — skipping game linking. Run against prod DB to link game IDs.');
+  process.exit(0);
+}
+
+// Clear any previously script-seeded 2025 games so week numbers are recomputed cleanly.
+// (Safe: live picks table only has current-season picks, not 2025 historical ones.)
+db.prepare('UPDATE historical_picks SET game_id = NULL WHERE season = 2025').run();
+db.prepare(`DELETE FROM games WHERE season = 2025 AND id NOT IN (
+  SELECT DISTINCT game_id FROM picks WHERE game_id IS NOT NULL
+)`).run();
+
+const seedGame = db.prepare(`
+  INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, commence_time, week_number, season, status, home_score, away_score)
+  VALUES (?, ?, ?, ?, ?, ?, ?, 2025, ?, ?, ?)
+  ON CONFLICT (espn_id) DO UPDATE SET
+    week_number = excluded.week_number,
+    status      = excluded.status,
+    home_score  = excluded.home_score,
+    away_score  = excluded.away_score
+  RETURNING id, espn_id
+`);
+
+const seasonStart = new Date('2025-08-25T00:00:00Z');
+
+// Fetch ESPN weeks 1-15, collect all eligible games, then assign our own
+// week numbers based on which Saturday each game falls on.
+// This avoids any reliance on ESPN's week numbering (which has a week-0 offset).
+
+function getWeekSaturday(commenceTime) {
+  // Shift to Eastern Daylight Time (UTC-4) before computing day-of-week.
+  // Football season runs Sep–Nov which is all EDT.
+  const et = new Date(new Date(commenceTime).getTime() - 4 * 60 * 60 * 1000);
+  const day = et.getUTCDay(); // 0=Sun, 1=Mon, …, 6=Sat
+  // Sunday/Monday games belong to the *previous* Saturday's week
+  // (e.g. Aug 31 Sunday games = same college-football week as Aug 30 Saturday)
+  const daysOffset = day === 0 ? -1 : day === 1 ? -2 : (6 - day);
+  const sat = new Date(et);
+  sat.setUTCDate(et.getUTCDate() + daysOffset);
+  return sat.toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+console.log('Fetching ESPN weeks 1-15 for 2025...');
+const allEvents = [];
+for (let espnWeek = 1; espnWeek <= 15; espnWeek++) {
+  try {
+    const events = await fetchEspnWeek(2025, espnWeek);
+    allEvents.push(...events.filter(e => new Date(e.commenceTime) >= seasonStart));
+  } catch (err) {
+    console.warn(`  ESPN week ${espnWeek} failed: ${err.message}`);
+  }
+}
+
+// Build Saturday → week_number map (sorted chronologically)
+const saturdays = [...new Set(allEvents.map(e => getWeekSaturday(e.commenceTime)))].sort();
+const saturdayToWeek = Object.fromEntries(saturdays.map((sat, i) => [sat, i + 1]));
+console.log(`Found ${saturdays.length} game weeks across ${allEvents.length} eligible games`);
+
+let gamesSeeded = 0;
+for (const e of allEvents) {
+  const week = saturdayToWeek[getWeekSaturday(e.commenceTime)];
+  const rows = seedGame.all(
+    e.espnId, e.homeTeam, e.awayTeam, e.homeAbbr, e.awayAbbr,
+    e.commenceTime, week, e.status, e.homeScore, e.awayScore
+  );
+  if (rows.length > 0) gamesSeeded++;
+}
+console.log(`Seeded ${gamesSeeded} new games (${allEvents.length} total eligible).`);
+
+// ── Manual game inserts (FCS teams not in ESPN FBS feed) ─────────────────────
+const MANUAL_GAMES = [
+  // Sundy W2: Lehigh -20 vs Sacred Heart (Lehigh won 28-10)
+  { espnId: '401767658', homeTeam: 'Lehigh Mountain Hawks', awayTeam: 'Sacred Heart Pioneers',
+    homeAbbr: 'LEH', awayAbbr: 'SHU', commenceTime: '2025-09-06T16:00Z',
+    weekNumber: 2, status: 'complete', homeScore: 28, awayScore: 10 },
+  // Sundy W4: Lehigh -11.5 at Bucknell (Lehigh won 41-24)
+  { espnId: '401767664', homeTeam: 'Bucknell Bison', awayTeam: 'Lehigh Mountain Hawks',
+    homeAbbr: 'BUCK', awayAbbr: 'LEH', commenceTime: '2025-09-20T22:00Z',
+    weekNumber: 4, status: 'complete', homeScore: 24, awayScore: 41 },
+];
+
+const seedManual = db.prepare(`
+  INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, commence_time, week_number, season, status, home_score, away_score)
+  VALUES (?, ?, ?, ?, ?, ?, ?, 2025, ?, ?, ?)
+  ON CONFLICT (espn_id) DO UPDATE SET
+    week_number = excluded.week_number,
+    status      = excluded.status,
+    home_score  = excluded.home_score,
+    away_score  = excluded.away_score
+  RETURNING id, espn_id
+`);
+
+for (const g of MANUAL_GAMES) {
+  seedManual.all(g.espnId, g.homeTeam, g.awayTeam, g.homeAbbr, g.awayAbbr,
+    g.commenceTime, g.weekNumber, g.status, g.homeScore, g.awayScore);
+}
+console.log(`Inserted ${MANUAL_GAMES.length} manual FCS games.`);
+
+// Link historical picks to their game via canonical_team match
+const picks = db.prepare(
+  `SELECT id, week_number, canonical_team FROM historical_picks WHERE season = 2025 AND canonical_team IS NOT NULL`
+).all();
+
+const updatePickGame = db.prepare(`UPDATE historical_picks SET game_id = ? WHERE id = ?`);
+
+let linked = 0;
+let unlinked = [];
+for (const pick of picks) {
+  const games = db.prepare(
+    `SELECT id, home_team, away_team FROM games WHERE week_number = ? AND season = 2025`
+  ).all(pick.week_number);
+
+  const match = games.find(g =>
+    teamsMatch(g.home_team, pick.canonical_team) || teamsMatch(g.away_team, pick.canonical_team)
+  );
+
+  if (match) {
+    updatePickGame.run(match.id, pick.id);
+    linked++;
+  } else {
+    unlinked.push(`  W${pick.week_number} ${pick.canonical_team}`);
+  }
+}
+
+console.log(`Linked ${linked}/${picks.length} picks to games.`);
+if (unlinked.length) {
+  console.log('Unlinked picks (no game match found):');
+  unlinked.forEach(u => console.log(u));
+}

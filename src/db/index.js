@@ -41,9 +41,9 @@ export async function initDb() {
     db.exec(`ALTER TABLE games ADD COLUMN total REAL`);
   }
 
-  // Remove week 0 games (before September of their season year)
-  db.exec(`DELETE FROM picks WHERE game_id IN (SELECT id FROM games WHERE strftime('%m', commence_time) < '09')`);
-  db.exec(`DELETE FROM games WHERE strftime('%m', commence_time) < '09'`);
+  // Remove true week 0 games (before Aug 25 — week 1 can start as early as Aug 28)
+  db.exec(`DELETE FROM picks WHERE game_id IN (SELECT id FROM games WHERE strftime('%m-%d', commence_time) < '08-25')`);
+  db.exec(`DELETE FROM games WHERE strftime('%m-%d', commence_time) < '08-25'`);
 
   // Migration: historical_picks table
   const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='historical_picks'`).all();
@@ -66,6 +66,9 @@ export async function initDb() {
     }
     if (!hpCols.some(c => c.name === 'canonical_team')) {
       db.exec(`ALTER TABLE historical_picks ADD COLUMN canonical_team TEXT`);
+    }
+    if (!hpCols.some(c => c.name === 'game_id')) {
+      db.exec(`ALTER TABLE historical_picks ADD COLUMN game_id INTEGER REFERENCES games(id) ON DELETE SET NULL`);
     }
   }
 

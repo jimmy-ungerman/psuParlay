@@ -109,22 +109,28 @@ export default function History() {
               <div className="border-t border-gray-800 divide-y divide-gray-800">
                 {week.is_historical ? (
                   // Historical picks: simplified view
-                  week.picks.map(pick => (
-                    <div key={pick.display_name} className="px-4 py-3 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-sm text-white">{pick.display_name}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {pick.picked_team || '—'}
-                        </p>
-                        <p className={`text-xs mt-0.5 font-mono ${parseFloat(pick.spread_value) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {formatSpread(pick.spread_value)}
-                        </p>
+                  week.picks.map(pick => {
+                    const hasGame = pick.home_team != null;
+                    return (
+                      <div key={pick.display_name} className="px-4 py-3 flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm text-white">{pick.display_name}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{pick.picked_team || '—'}</p>
+                          {hasGame && pick.home_score !== null && (
+                            <p className="text-xs text-gray-600 mt-0.5">
+                              Final: {pick.home_team} {pick.home_score}–{pick.away_score} {pick.away_team}
+                            </p>
+                          )}
+                          <p className={`text-xs mt-0.5 font-mono ${parseFloat(pick.spread_value) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {formatSpread(pick.spread_value)}
+                          </p>
+                        </div>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${resultPill(pick.result)}`}>
+                          {pick.result.toUpperCase()}
+                        </span>
                       </div>
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${resultPill(pick.result)}`}>
-                        {pick.result.toUpperCase()}
-                      </span>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   // Live picks: full game detail
                   week.picks.map(pick => {
