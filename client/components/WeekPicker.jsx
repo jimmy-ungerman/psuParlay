@@ -96,13 +96,19 @@ export default function WeekPicker() {
 
   // Build conference tabs from games actually present this week, in standard order
   const conferences = useMemo(() => {
-    const present = new Set(games.map(g => g.conference || getConference(g.home_team)));
+    const present = new Set();
+    games.forEach(g => {
+      present.add(g.conference || getConference(g.home_team));
+      present.add(getConference(g.away_team));
+    });
     return ['All', ...CONF_ORDER.filter(c => present.has(c))];
   }, [games]);
 
   const filteredGames = useMemo(() => {
     return games.filter(g => {
-      const matchesConf = activeConf === 'All' || (g.conference || getConference(g.home_team)) === activeConf;
+      const homeConf = g.conference || getConference(g.home_team);
+      const awayConf = getConference(g.away_team);
+      const matchesConf = activeConf === 'All' || homeConf === activeConf || awayConf === activeConf;
       return matchesConf && matchesSearch(g, search);
     });
   }, [games, activeConf, search]);
