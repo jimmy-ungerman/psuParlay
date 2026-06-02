@@ -217,8 +217,9 @@ export default function ParlayCard() {
           {/* Individual picks */}
           <div className="space-y-3">
             {picks.map(pick => {
-              const pickedTeam = pick.picked_team === 'home' ? pick.home_team : pick.away_team;
-              const opponent   = pick.picked_team === 'home' ? pick.away_team : pick.home_team;
+              const isTotalPick = pick.picked_team === 'over' || pick.picked_team === 'under';
+              const pickedTeam = isTotalPick ? (pick.picked_team === 'over' ? 'Over' : 'Under') : (pick.picked_team === 'home' ? pick.home_team : pick.away_team);
+              const opponent   = isTotalPick ? `${pick.home_team} vs ${pick.away_team}` : (pick.picked_team === 'home' ? pick.away_team : pick.home_team);
               const isGameLive = pick.game_status === 'in_progress';
               const isComplete = pick.game_status === 'complete';
               const pickReactions = reactions.filter(r => r.pick_id === pick.id);
@@ -245,6 +246,7 @@ export default function ParlayCard() {
                     <div className={`mt-2 text-xs font-medium ${isGameLive ? 'text-yellow-400' : 'text-gray-400'}`}>
                       {isGameLive && <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5 animate-pulse" />}
                       {pick.home_abbr} {pick.home_score} – {pick.away_score} {pick.away_abbr}
+                      {isTotalPick && pick.home_score !== null && ` (${pick.home_score + pick.away_score} pts)`}
                       {isGameLive && ' (Live)'}
                       {isComplete && ' (Final)'}
                     </div>

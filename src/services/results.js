@@ -9,7 +9,19 @@ export function calculateResult(pick, game) {
     return 'pending';
   }
 
-  const homeMargin = parseInt(game.home_score) - parseInt(game.away_score);
+  const homeScore = parseInt(game.home_score);
+  const awayScore = parseInt(game.away_score);
+
+  if (pick.picked_team === 'over' || pick.picked_team === 'under') {
+    const combined = homeScore + awayScore;
+    const total = parseFloat(pick.spread_at_pick);
+    const margin = pick.picked_team === 'over' ? combined - total : total - combined;
+    if (margin > 0) return 'win';
+    if (margin < 0) return 'loss';
+    return 'push';
+  }
+
+  const homeMargin = homeScore - awayScore;
   const homeSpread = parseFloat(game.home_spread);
 
   // coverMargin > 0 = picked team covered, < 0 = failed to cover, 0 = push
@@ -23,7 +35,7 @@ export function calculateResult(pick, game) {
   return 'push';
 }
 
-// Spread from the perspective of the picked team
+// Line from the perspective of the pick (spread for home/away, total for over/under)
 export function spreadForTeam(pickedTeam, homeSpread) {
   return pickedTeam === 'home' ? homeSpread : -homeSpread;
 }

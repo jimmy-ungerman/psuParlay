@@ -223,13 +223,25 @@ export default function WeekPicker() {
       {myPick && (
         <div className="bg-blue-600/10 border border-blue-600/30 rounded-xl p-4">
           <p className="text-xs text-blue-400 font-medium uppercase tracking-wide mb-1">Your Pick</p>
-          <p className="font-semibold text-white">
-            {myPick.picked_team === 'home' ? myPick.home_team : myPick.away_team}
-            <span className="text-blue-300 ml-2">{formatSpread(myPick.spread_at_pick)}</span>
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            {myPick.picked_team === 'home' ? myPick.away_team : myPick.home_team} (opponent)
-          </p>
+          {myPick.picked_team === 'over' || myPick.picked_team === 'under' ? (
+            <>
+              <p className="font-semibold text-white">
+                {myPick.picked_team === 'over' ? 'Over' : 'Under'}
+                <span className="text-blue-300 ml-2">{myPick.spread_at_pick}</span>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">{myPick.home_team} vs {myPick.away_team}</p>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold text-white">
+                {myPick.picked_team === 'home' ? myPick.home_team : myPick.away_team}
+                <span className="text-blue-300 ml-2">{formatSpread(myPick.spread_at_pick)}</span>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {myPick.picked_team === 'home' ? myPick.away_team : myPick.home_team} (opponent)
+              </p>
+            </>
+          )}
           <p className="text-xs text-gray-500 mt-0.5">Locked before kickoff — you can change until then</p>
         </div>
       )}
@@ -312,6 +324,46 @@ export default function WeekPicker() {
                   {formatSpread(-parseFloat(game.home_spread))}
                 </span>
               </button>
+
+              {/* Over / Under — only shown when total is available */}
+              {game.total != null && (
+                <>
+                  <div className="border-t border-gray-800 mx-4" />
+                  <div className="flex">
+                    <button
+                      disabled={unavailable || submitting}
+                      onClick={() => handlePick(game.id, 'over')}
+                      className={`flex-1 flex items-center justify-between px-4 py-3 hover:bg-gray-800 transition-colors ${
+                        isMyGame && myPick.picked_team === 'over' ? 'bg-blue-600/20' : ''
+                      } disabled:cursor-not-allowed`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {isMyGame && myPick.picked_team === 'over' && (
+                          <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                        )}
+                        <span className="font-medium text-white">Over</span>
+                      </div>
+                      <span className="font-semibold tabular-nums text-gray-300">{game.total}</span>
+                    </button>
+                    <div className="border-l border-gray-800 my-2" />
+                    <button
+                      disabled={unavailable || submitting}
+                      onClick={() => handlePick(game.id, 'under')}
+                      className={`flex-1 flex items-center justify-between px-4 py-3 hover:bg-gray-800 transition-colors ${
+                        isMyGame && myPick.picked_team === 'under' ? 'bg-blue-600/20' : ''
+                      } disabled:cursor-not-allowed`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {isMyGame && myPick.picked_team === 'under' && (
+                          <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                        )}
+                        <span className="font-medium text-white">Under</span>
+                      </div>
+                      <span className="font-semibold tabular-nums text-gray-300">{game.total}</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           );
         })}

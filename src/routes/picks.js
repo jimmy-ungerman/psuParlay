@@ -24,6 +24,7 @@ router.get('/', requireAuth, async (req, res) => {
          u.username as display_name,
          g.home_team, g.away_team, g.home_abbr, g.away_abbr,
          g.home_spread as current_home_spread,
+         g.total as current_total,
          g.commence_time, g.status as game_status,
          g.home_score, g.away_score,
          (SELECT home_spread FROM odds_snapshots WHERE game_id = g.id ORDER BY recorded_at ASC LIMIT 1) as opening_spread
@@ -36,8 +37,13 @@ router.get('/', requireAuth, async (req, res) => {
     );
 
     const annotated = picks.map(p => {
-      const currentPickedSpread = spreadForTeam(p.picked_team, parseFloat(p.current_home_spread));
-      const movement = parseFloat((currentPickedSpread - parseFloat(p.spread_at_pick)).toFixed(1));
+      const isTotalPick = p.picked_team === 'over' || p.picked_team === 'under';
+      const currentPickedSpread = isTotalPick
+        ? parseFloat(p.current_total)
+        : spreadForTeam(p.picked_team, parseFloat(p.current_home_spread));
+      const movement = !isNaN(currentPickedSpread)
+        ? parseFloat((currentPickedSpread - parseFloat(p.spread_at_pick)).toFixed(1))
+        : 0;
       return { ...p, current_picked_spread: currentPickedSpread, line_movement: movement };
     });
 
@@ -51,8 +57,8 @@ router.get('/', requireAuth, async (req, res) => {
 // POST /api/picks
 router.post('/', requireAuth, async (req, res) => {
   const { gameId, pickedTeam } = req.body;
-  if (!gameId || !['home', 'away'].includes(pickedTeam)) {
-    return res.status(400).json({ error: 'gameId and pickedTeam (home|away) required' });
+  if (!gameId || !['home', 'away', 'over', 'under'].includes(pickedTeam)) {
+    return res.status(400).json({ error: 'gameId and pickedTeam (home|away|over|under) required' });
   }
 
   try {
@@ -79,7 +85,13 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(409).json({ error: `${claimed[0].username} already has this game` });
     }
 
-    const spreadAtPick = spreadForTeam(pickedTeam, parseFloat(game.home_spread));
+    if ((pickedTeam === 'over' || pickedTeam === 'under') && !game.total) {
+      return res.status(400).json({ error: 'No total available for this game' });
+    }
+
+    const spreadAtPick = (pickedTeam === 'over' || pickedTeam === 'under')
+      ? parseFloat(game.total)
+      : spreadForTeam(pickedTeam, parseFloat(game.home_spread));
 
     const { rows: pick } = await pool.query(
       `INSERT INTO picks (user_id, game_id, week_number, season, picked_team, spread_at_pick)

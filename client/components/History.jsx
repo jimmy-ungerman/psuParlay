@@ -128,22 +128,26 @@ export default function History() {
                 ) : (
                   // Live picks: full game detail
                   week.picks.map(pick => {
-                    const pickedTeam = pick.picked_team === 'home' ? pick.home_team : pick.away_team;
-                    const opponent = pick.picked_team === 'home' ? pick.away_team : pick.home_team;
-                    const spread = pick.picked_team === 'home'
-                      ? parseFloat(pick.home_spread)
-                      : -parseFloat(pick.home_spread);
+                    const isTotalPick = pick.picked_team === 'over' || pick.picked_team === 'under';
+                    const pickedTeam = isTotalPick ? null : (pick.picked_team === 'home' ? pick.home_team : pick.away_team);
+                    const opponent = isTotalPick ? null : (pick.picked_team === 'home' ? pick.away_team : pick.home_team);
+                    const spread = isTotalPick
+                      ? parseFloat(pick.spread_at_pick)
+                      : pick.picked_team === 'home' ? parseFloat(pick.home_spread) : -parseFloat(pick.home_spread);
 
                     return (
                       <div key={pick.id} className="px-4 py-3 flex items-center justify-between">
                         <div>
                           <p className="font-medium text-sm text-white">{pick.display_name}</p>
                           <p className="text-xs text-gray-500 mt-0.5">
-                            {pickedTeam} {formatSpread(spread)} vs {opponent}
+                            {isTotalPick
+                              ? `${pick.picked_team === 'over' ? 'Over' : 'Under'} ${spread} · ${pick.home_team} vs ${pick.away_team}`
+                              : `${pickedTeam} ${formatSpread(spread)} vs ${opponent}`}
                           </p>
                           {pick.home_score !== null && (
                             <p className="text-xs text-gray-600 mt-0.5">
                               Final: {pick.home_team} {pick.home_score}–{pick.away_score} {pick.away_team}
+                              {isTotalPick && ` (${pick.home_score + pick.away_score} pts)`}
                             </p>
                           )}
                         </div>

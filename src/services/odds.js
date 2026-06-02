@@ -15,7 +15,7 @@ export async function fetchOddsApiGames() {
     params: {
       apiKey: process.env.ODDS_API_KEY,
       regions: 'us',
-      markets: 'spreads',
+      markets: 'spreads,totals',
       oddsFormat: 'american',
     },
     timeout: 10000,
@@ -41,11 +41,15 @@ function parseOddsEvent(game) {
   const homeOutcome = spreadsMarket.outcomes.find(o => o.name === game.home_team);
   if (!homeOutcome) return null;
 
+  const totalsMarket = bookmaker.markets?.find(m => m.key === 'totals');
+  const overOutcome = totalsMarket?.outcomes.find(o => o.name === 'Over');
+
   return {
     oddsApiId: game.id,
     homeTeam: game.home_team,
     awayTeam: game.away_team,
-    homeSpread: homeOutcome.point, // negative = home is favored
+    homeSpread: homeOutcome.point,
+    total: overOutcome?.point ?? null,
     commenceTime: game.commence_time,
   };
 }
@@ -64,10 +68,15 @@ export function teamsMatch(a, b) {
 // --- Mock mode helpers (used when ODDS_API_KEY is not set) ---
 
 const TYPICAL_SPREADS = [-3, -3.5, -6.5, -7, -7.5, -10, -10.5, -13.5, -14, -17, -21, -24.5, -28];
+const TYPICAL_TOTALS = [41.5, 44.5, 47.5, 48.5, 51.5, 54, 55.5, 57.5, 61.5, 65];
 
 export function generateMockSpread() {
   const spread = TYPICAL_SPREADS[Math.floor(Math.random() * TYPICAL_SPREADS.length)];
   return Math.random() > 0.45 ? spread : -spread;
+}
+
+export function generateMockTotal() {
+  return TYPICAL_TOTALS[Math.floor(Math.random() * TYPICAL_TOTALS.length)];
 }
 
 export function fluctuateSpread(currentSpread) {
