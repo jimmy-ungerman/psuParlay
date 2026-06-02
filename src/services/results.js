@@ -27,3 +27,18 @@ export function calculateResult(pick, game) {
 export function spreadForTeam(pickedTeam, homeSpread) {
   return pickedTeam === 'home' ? homeSpread : -homeSpread;
 }
+
+// Returns the pick deadline: 11:30 AM Eastern on the Saturday of the given game.
+// Handles DST by probing UTC-4 (EDT) and UTC-5 (EST).
+export function getPickDeadline(commenceTime) {
+  const game = new Date(commenceTime);
+  const dateStr = game.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const [year, month, day] = dateStr.split('-').map(Number);
+  for (const offset of [4, 5]) {
+    const candidate = new Date(Date.UTC(year, month - 1, day, 11 + offset, 30));
+    const easternHour = parseInt(
+      candidate.toLocaleString('en-US', { timeZone: 'America/New_York', hour: '2-digit', hour12: false })
+    );
+    if (easternHour === 11) return candidate;
+  }
+}
