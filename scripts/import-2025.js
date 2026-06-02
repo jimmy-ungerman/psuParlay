@@ -40,16 +40,30 @@ function normalizeTeam(name) {
   return name.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
 }
 
+// Words that indicate a *different* school when they follow a shared prefix.
+// e.g. "Iowa" should not match "Iowa State" because "State" is a qualifier.
+const SCHOOL_QUALIFIERS = new Set(['state', 'tech', 'a&m', 'christian', 'southern']);
+
 function teamsMatch(a, b) {
   const na = normalizeTeam(a);
   const nb = normalizeTeam(b);
-  if (na === nb || na.includes(nb) || nb.includes(na)) return true;
-  // Handle abbreviated names: "App State Mountaineers" ↔ "Appalachian State"
-  // Check if first word of shorter is a prefix of first word of longer, and second words match
+  if (na === nb) return true;
+
   const wa = na.split(' ');
   const wb = nb.split(' ');
   const [shorter, longer] = wa.length <= wb.length ? [wa, wb] : [wb, wa];
-  // Check if one first-word is a prefix of the other (handles "App" ↔ "Appalachian")
+
+  // Shorter words must be a prefix of longer words (exact, in order).
+  // Then the very next word in the longer name must NOT be a qualifier —
+  // that would indicate a different school (Iowa ≠ Iowa State, Utah ≠ Utah State, etc.)
+  const isPrefix = shorter.every((w, i) => w === longer[i]);
+  if (isPrefix) {
+    const nextWord = longer[shorter.length];
+    if (nextWord && SCHOOL_QUALIFIERS.has(nextWord)) return false;
+    return true;
+  }
+
+  // Handle abbreviated first words: "App State" ↔ "Appalachian State"
   return shorter.length >= 2 &&
     (longer[0].startsWith(shorter[0]) || shorter[0].startsWith(longer[0])) &&
     shorter[1] === longer[1];
@@ -79,6 +93,8 @@ const ABBREV_MAP = {
   'ECU':       'East Carolina',
   'GT':        'Georgia Tech',
   'Georgia':   'Georgia',
+  'Georgia Tech': 'Georgia Tech',
+  'Harvard':   'Harvard',
   'Illinois':  'Illinois',
   'Indiana':   'Indiana',
   'Iowa':      'Iowa',
@@ -105,11 +121,15 @@ const ABBREV_MAP = {
   'Ole Miss':  'Ole Miss',
   'Oregon':    'Oregon',
   'PSU':       'Penn State',
+  'Penn State': 'Penn State',
   'Pitt':      'Pittsburgh',
   'Rice':      'Rice',
   'SC':        'South Carolina',
   'SDSU':      'San Diego State',
+  'Michigan':  'Michigan',
   'SMU':       'SMU',
+  'SoMiss':    'Southern Miss',
+  'Tulane':    'Tulane',
   'Stan':      'Stanford',
   'Ten':       'Tennessee',
   'Tenn':      'Tennessee',
@@ -125,8 +145,12 @@ const ABBREV_MAP = {
   'USF':       'South Florida',
   'UTSA':      'UTSA',
   'Utah':      'Utah',
+
   'VA':        'Virginia',
   'Vandy':     'Vanderbilt',
+  'Virginia':  'Virginia',
+  'Wake':      'Wake Forest',
+  'Wisconsin': 'Wisconsin',
   'WVU':       'West Virginia',
   'Wash':      'Washington',
 };
@@ -172,20 +196,10 @@ if (!hpCols.some(c => c.name === 'game_id')) {
   db.exec(`ALTER TABLE historical_picks ADD COLUMN game_id INTEGER REFERENCES games(id) ON DELETE SET NULL`);
 }
 
-// Old spreadsheet names that have been replaced by usernames — clean these up on import
-const RENAMED = {
-  'Kevin':        'Jobin69',
-  'Jimmy':        'jimmy',
-  'Tim':          'Boxmaster69420',
-  'Grant Grasha': 'GMoney2458',
-  'Steve Barker': 'SammyBigBeans',
-  'Glenn Grasha': 'Glennjamin',
-};
-const oldNames = Object.keys(RENAMED);
-if (oldNames.length) {
-  db.prepare(`DELETE FROM historical_picks WHERE season = 2025 AND display_name IN (${oldNames.map(() => '?').join(',')})`).run(...oldNames);
-  console.log(`Cleaned up old display names: ${oldNames.join(', ')}`);
-}
+// Wipe all 2025 historical picks — DATA array is the source of truth.
+// This ensures removed/corrected rows don't linger.
+db.prepare('DELETE FROM historical_picks WHERE season = 2025').run();
+console.log('Cleared existing 2025 historical picks.');
 
 // Hardcoded 2025 data: [displayName, week, result, spreadValue, pickedTeam]
 const DATA = [
@@ -199,8 +213,11 @@ const DATA = [
   ['Jobin69', 7,  'loss', -3.5,  'UNLV -6.5'],
   ['Jobin69', 8,  'win',  3.5,   'Army +10.5'],
   ['Jobin69', 9,  'win',  19.5,  'SDSU -3.5'],
-  ['Jobin69', 10, 'win',  6.5,   'Colorado +4'],
-  ['Jobin69', 11, 'win',  11.5,  'Coastal -7.5'],
+  ['Jobin69', 10, 'loss', -31,   'Colorado +4'],
+  ['Jobin69', 11, 'win',  5.5,   'Coastal -7.5'],
+  ['Jobin69', 12, 'win',  10.5,  'Wake -5.5'],
+  ['Jobin69', 13, 'loss',  -24,  'Harvard -7'],
+  ['Jobin69', 14, 'loss', -12.5, 'Wisconsin -2.5'],
 
   // jimmy
   ['jimmy', 1,  'win',  5.5,   'OSU -1.5'],
@@ -208,12 +225,15 @@ const DATA = [
   ['jimmy', 3,  'win',  6.5,   'GT +3.5'],
   ['jimmy', 4,  'win',  8.5,   'Memphis +7.5'],
   ['jimmy', 5,  'loss', -3.5,  'Indiana -8.5'],
-  ['jimmy', 6,  'win',  9.5,   'Illinois -7.5'],
+  ['jimmy', 6,  'win',  8.5,   'Illinois -7.5'],
   ['jimmy', 7,  'win',  0.5,   'Missou +3.5'],
   ['jimmy', 8,  'loss', -7.5,  'Tenn +9.5'],
   ['jimmy', 9,  'win',  4.5,   'Vandy -2.5'],
   ['jimmy', 10, 'win',  0.5,   'Vandy +3.5'],
-  ['jimmy', 11, 'win',  11.5,  'Bama -10.5'],
+  ['jimmy', 11, 'win',  0.5,   'Bama -10.5'],
+  ['jimmy', 12, 'win',  10.5,  'Penn State -7.5'],
+  ['jimmy', 13, 'loss',  -16.5,  'Georgia Tech -2.5'],
+  ['jimmy', 14, 'loss',  -9.5,  'Penn State -13.5'],
 
   // Ryan Arzenti (unregistered)
   ['Ryan Arzenti', 1,  'win',  6,     'SC -7'],
@@ -224,7 +244,8 @@ const DATA = [
   ['Ryan Arzenti', 7,  'win',  33.5,  'Iowa -3.5'],
   ['Ryan Arzenti', 8,  'win',  5.5,   'Vandy -1.5'],
   ['Ryan Arzenti', 9,  'win',  0.5,   'Nwestrn +7.5'],
-  ['Ryan Arzenti', 10, 'loss', -10,   'Indiana -21'],
+  ['Ryan Arzenti', 10, 'win',  24,    'Indiana -21'],
+  ['Ryan Arzenti', 11, 'loss', -9.5,  'BYU +12.5'],
 
   // Sundy (unregistered)
   ['Sundy', 2,  'loss', -2,    'Lehigh -20'],
@@ -235,7 +256,7 @@ const DATA = [
   ['Sundy', 7,  'win',  32.5,  'UCLA +7.5'],
   ['Sundy', 8,  'win',  33.5,  'JMU -2.5'],
   ['Sundy', 9,  'win',  29.5,  'Iowa -8.5'],
-  ['Sundy', 10, 'win',  9.5,   null],
+  ['Sundy', 11, 'win',  9.5,   'Georgia -10.5'],
 
   // Boxmaster69420 (Tim)
   ['Boxmaster69420', 1,  'win',  5.5,   'Ten -13.5'],
@@ -247,8 +268,11 @@ const DATA = [
   ['Boxmaster69420', 7,  'loss', -15.5, 'Toledo -10.5'],
   ['Boxmaster69420', 8,  'win',  13.5,  'UCONN -1.5'],
   ['Boxmaster69420', 9,  'win',  17.5,  'Cincy -3.5'],
-  ['Boxmaster69420', 10, 'loss', -13.5, 'UCONN -11.5'],
-  ['Boxmaster69420', 11, 'win',  4.5,   'Wash -10.5'],
+  ['Boxmaster69420', 10, 'win',  7.5,   'UCONN -11.5'],
+  ['Boxmaster69420', 11, 'loss', -13.5, 'Wash -10.5'],
+  ['Boxmaster69420', 12, 'win',  4.5,   'Marshall -7.5'],
+  ['Boxmaster69420', 13, 'loss',  -4.5,   'UCONN -7.5'],
+  ['Boxmaster69420', 14, 'win',  11.5,   'Virginia -8.5'],
 
   // Tanner (unregistered)
   ['Tanner', 2,  'loss', -7.5,  'PSU -41.5'],
@@ -257,21 +281,27 @@ const DATA = [
   ['Tanner', 5,  'loss', -9.5,  'PSU -3.5'],
   ['Tanner', 7,  'loss', -6.5,  'Auburn +3.5'],
   ['Tanner', 9,  'win',  13.5,  'Ole Miss +5.5'],
-  ['Tanner', 10, 'win',  7,     'Under 55.5'],
-  ['Tanner', 11, 'win',  6,     'Under 42.5'],
+  ['Tanner', 10, 'win',  11.5,  'Under 55.5'],
+  ['Tanner', 11, 'win',  7.5,     'Under 42.5'],
+  ['Tanner', 12, 'win',  6,     'Over 51'],
+  ['Tanner', 13, 'win',  30.5,     'Over 58.5'],
+  ['Tanner', 14, 'loss',  -6.5,     'Oklahoma -10.5'],
 
   // GMoney2458 (Grant Grasha)
   ['GMoney2458', 1,  'win',  18.5,  'Oregon -27.5'],
   ['GMoney2458', 2,  'loss', -0.5,  'Iowa St -3.5'],
-  ['GMoney2458', 3,  'loss', -4.5,  'Oregon -26.5'],
+  ['GMoney2458', 3,  'loss', -6.5,  'Oregon -26.5'],
   ['GMoney2458', 4,  'win',  27.5,  'Maryland +10.5'],
   ['GMoney2458', 5,  'win',  3.5,   'Ole Miss -1.5'],
   ['GMoney2458', 6,  'win',  2,     'Maryland +6'],
   ['GMoney2458', 7,  'win',  15.5,  'USC -2.5'],
   ['GMoney2458', 8,  'win',  6.5,   'BYU +3.5'],
   ['GMoney2458', 9,  'loss', -3,    'Bama -10'],
-  ['GMoney2458', 10, 'loss', -11.5, 'Georgia -6.5'],
-  ['GMoney2458', 11, 'loss', -1.5,  'Duke -8.5'],
+  ['GMoney2458', 10, 'loss', -2.5,  'Georgia -6.5'],
+  ['GMoney2458', 11, 'loss', -11.5, 'Duke -8.5'],
+  ['GMoney2458', 12, 'loss', -1.5,  'USC -6.5'],
+  ['GMoney2458', 13, 'loss', -4.5,  'USC +10.5'],
+  ['GMoney2458', 14, 'loss', -1.5, 'Auburn +5.5'],
 
   // Mitch Bacco (unregistered)
   ['Mitch Bacco', 2,  'loss', -20.5, 'K State -17.5'],
@@ -280,8 +310,9 @@ const DATA = [
   ['Mitch Bacco', 6,  'win',  2.5,   'AppState -1.5'],
   ['Mitch Bacco', 8,  'loss', -1.5,  'AF -4.5'],
   ['Mitch Bacco', 9,  'loss', -14.5, 'AzST -6.5'],
-  ['Mitch Bacco', 10, 'win',  0.5,   'Minn -3.5'],
-  ['Mitch Bacco', 11, 'loss', -30.5, 'WVU -6.5'],
+  ['Mitch Bacco', 10, 'loss', -0.5,  'Minn -3.5'],
+  ['Mitch Bacco', 11, 'win',  0.5,   'WVU -6.5'],
+  ['Mitch Bacco', 12, 'loss', -30.5, 'SoMiss -3.5'],
 
   // SammyBigBeans (Steve Barker)
   ['SammyBigBeans', 1,  'win',  32.5,  'Iowa St -15.5'],
@@ -292,30 +323,36 @@ const DATA = [
   ['SammyBigBeans', 6,  'loss', -6.5,  'Iowa St +1.5'],
   ['SammyBigBeans', 7,  'loss', -14.5, 'OK +2.5'],
   ['SammyBigBeans', 8,  'win',  12.5,  'GT +3.5'],
-  ['SammyBigBeans', 9,  'win',  19.5,  'BYU +2.5'],
-  ['SammyBigBeans', 10, 'loss', -10.5, 'ECU -4.5'],
-  ['SammyBigBeans', 11, 'loss', -1,    'VA -6.5'],
+  ['SammyBigBeans', 9,  'win',  16.5,  'BYU +2.5'],
+  ['SammyBigBeans', 10, 'win',  26.5,  'ECU -4.5'],
+  ['SammyBigBeans', 11, 'loss', -13.5, 'VA -6.5'],
+  ['SammyBigBeans', 12, 'loss', -0.5,  'Memphis +3.5'],
+  ['SammyBigBeans', 13, 'win',  16.5,  'Tulane -7.5'],
+  ['SammyBigBeans', 14, 'loss', -16.5, 'SC -2.5'],
 
   // Glennjamin (Glenn Grasha)
   ['Glennjamin', 1,  'loss', -28,   'Bama -14'],
   ['Glennjamin', 2,  'loss', -5.5,  'SMU -2.5'],
-  ['Glennjamin', 3,  'win',  11,    'Illinois -27.5'],
+  ['Glennjamin', 3,  'win',  10.5,  'Illinois -27.5'],
   ['Glennjamin', 4,  'win',  17.5,  'UCF -7.5'],
   ['Glennjamin', 5,  'loss', -8.5,  'UCF +5.5'],
   ['Glennjamin', 6,  'win',  23.5,  'NWestern -11.5'],
   ['Glennjamin', 7,  'win',  17.5,  'Clem -13.5'],
   ['Glennjamin', 8,  'loss', -4.5,  'A&M -7.5'],
   ['Glennjamin', 9,  'loss', -17.5, 'Oregon -31.5'],
-  ['Glennjamin', 10, 'win',  0.5,   'Pitt -14'],
-  ['Glennjamin', 11, 'loss', -9,    'Vandy -6.5'],
+  ['Glennjamin', 10, 'win',  1,     'Pitt -14'],
+  ['Glennjamin', 11, 'win',  0.5,   'Vandy -6.5'],
+  ['Glennjamin', 12, 'loss', -9.5,  'Michigan -11.5'],
+  ['Glennjamin', 14, 'win',  39.5,  'Lville -1.5'],
 
   // Jon (unregistered)
   ['Jon', 1,  'loss', -1.5,  'UK -9.5'],
   ['Jon', 2,  'win',  5.5,   'Mizzou -5.5'],
-  ['Jon', 3,  'loss', 0.5,   'OSU -29.5'],
-  ['Jon', 5,  'win',  4.5,   'Lville -3.5'],
-  ['Jon', 10, 'loss', -4.5,  'Oregon -6.5'],
-  ['Jon', 11, 'loss', -11.5, 'Oregon -6.5'],
+  ['Jon', 3,  'loss', -1.5,  'OSU -29.5'],
+  ['Jon', 5,  'win',  3.5,   'Lville -3.5'],
+  ['Jon', 11, 'loss', -4.5,  'Oregon -6.5'],
+  ['Jon', 12, 'loss', -11.5, 'Cincy -5.5'],
+  ['Jon', 14, 'win',  5.5,   'Oregon -6.5'],
 ];
 
 const insert = db.prepare(`
@@ -438,6 +475,10 @@ const MANUAL_GAMES = [
   { espnId: '401767664', homeTeam: 'Bucknell Bison', awayTeam: 'Lehigh Mountain Hawks',
     homeAbbr: 'BUCK', awayAbbr: 'LEH', commenceTime: '2025-09-20T22:00Z',
     weekNumber: 4, status: 'complete', homeScore: 24, awayScore: 41 },
+  // Kevin W13: Harvard -7 at Yale (Harvard lost 0-10)
+  { espnId: '401767708', homeTeam: 'Yale Bulldogs', awayTeam: 'Harvard Crimson',
+    homeAbbr: 'YALE', awayAbbr: 'HAR', commenceTime: '2025-11-22T22:03Z',
+    weekNumber: 13, status: 'complete', homeScore: 45, awayScore: 28 },
 ];
 
 const seedManual = db.prepare(`
@@ -487,4 +528,36 @@ console.log(`Linked ${linked}/${picks.length} picks to games.`);
 if (unlinked.length) {
   console.log('Unlinked picks (no game match found):');
   unlinked.forEach(u => console.log(u));
+}
+
+// ── Totals picks: link by team names (no canonical_team to match on) ─────────
+const TOTALS_GAME_LINKS = [
+  // Tanner W10: Under 55.5 — Ole Miss vs South Carolina (combined 44, Under hit)
+  { displayName: 'Tanner', weekNumber: 10, teams: ['Ole Miss', 'South Carolina'] },
+  // Tanner W11: Under 42.5 — North Carolina vs Stanford (combined 35, Under hit)
+  { displayName: 'Tanner', weekNumber: 11, teams: ['North Carolina', 'Stanford'] },
+  // Tanner W12: Over 51 — BYU vs TCU (combined 57, Over hit)
+  { displayName: 'Tanner', weekNumber: 12, teams: ['BYU', 'TCU'] },
+  // Tanner W13: Over 58.5 — Texas vs Arkansas (combined 89, Over hit)
+  { displayName: 'Tanner', weekNumber: 13, teams: ['Texas', 'Arkansas'] },
+];
+
+const getPickId = db.prepare('SELECT id FROM historical_picks WHERE season=2025 AND week_number=? AND display_name=?');
+for (const link of TOTALS_GAME_LINKS) {
+  const game = db.prepare(
+    `SELECT id FROM games WHERE season=2025 AND week_number=? AND (
+      (home_team LIKE ? AND away_team LIKE ?) OR
+      (home_team LIKE ? AND away_team LIKE ?)
+    )`
+  ).get(link.weekNumber,
+    `%${link.teams[0]}%`, `%${link.teams[1]}%`,
+    `%${link.teams[1]}%`, `%${link.teams[0]}%`
+  );
+  const pick = getPickId.get(link.weekNumber, link.displayName);
+  if (game && pick) {
+    updatePickGame.run(game.id, pick.id);
+    console.log(`Linked totals pick: ${link.displayName} W${link.weekNumber} → game ${game.id}`);
+  } else {
+    console.warn(`Could not link totals pick: ${link.displayName} W${link.weekNumber}`);
+  }
 }
