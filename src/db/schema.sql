@@ -81,6 +81,17 @@ CREATE TABLE IF NOT EXISTS parlay_links (
   PRIMARY KEY (week_number, season)
 );
 
+CREATE TABLE IF NOT EXISTS historical_picks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  season INTEGER NOT NULL,
+  week_number INTEGER NOT NULL,
+  display_name TEXT NOT NULL,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  result TEXT NOT NULL,
+  spread_value REAL NOT NULL,
+  UNIQUE(season, week_number, display_name)
+);
+
 CREATE TABLE IF NOT EXISTS push_subscriptions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
