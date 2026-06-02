@@ -38,6 +38,7 @@ export const api = {
   // Leaderboard
   getLeaderboard: (season) => request('GET', `/leaderboard${season ? `?season=${season}` : ''}`),
   getHistory: (season) => request('GET', `/leaderboard/history${season ? `?season=${season}` : ''}`),
+  getSeasons: () => request('GET', '/leaderboard/seasons'),
 
   // Reactions
   getReactions: (week, season) => request('GET', `/reactions?week=${week}&season=${season}`),

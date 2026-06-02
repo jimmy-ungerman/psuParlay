@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/index.js';
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 function formatSpread(spread) {
   const n = parseFloat(spread);
   return n > 0 ? `+${n}` : `${n}`;
@@ -20,12 +22,23 @@ export default function History() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState(null);
+  const [season, setSeason] = useState(String(CURRENT_YEAR));
+  const [seasons, setSeasons] = useState([]);
+
+  useEffect(() => {
+    api.getSeasons().then(res => {
+      const list = res.seasons || [];
+      if (!list.includes(CURRENT_YEAR)) list.unshift(CURRENT_YEAR);
+      setSeasons(list);
+    }).catch(() => setSeasons([CURRENT_YEAR]));
+  }, []);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
+      setExpanded(null);
       try {
-        const res = await api.getHistory();
+        const res = await api.getHistory(season);
         setHistory(res.history || []);
         if (res.history?.length > 0) setExpanded(res.history[0].week_number);
       } catch (err) {
@@ -35,25 +48,33 @@ export default function History() {
       }
     }
     load();
-  }, []);
-
-  if (loading) return <div className="p-6 text-center text-gray-500">Loading history...</div>;
-  if (error) return <div className="p-6 text-center text-red-400">{error}</div>;
-
-  if (history.length === 0) {
-    return (
-      <div className="p-6 text-center py-12 text-gray-600">
-        <p className="text-4xl mb-3">📋</p>
-        <p>No completed weeks yet</p>
-      </div>
-    );
-  }
+  }, [season]);
 
   return (
     <div className="p-4 space-y-3">
-      <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Past Weeks</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Past Weeks</h2>
+        <select
+          value={season}
+          onChange={e => setSeason(e.target.value)}
+          className="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none"
+        >
+          {seasons.map(s => (
+            <option key={s} value={String(s)}>{s}</option>
+          ))}
+        </select>
+      </div>
 
-      {history.map(week => {
+      {loading ? (
+        <div className="p-6 text-center text-gray-500">Loading history...</div>
+      ) : error ? (
+        <div className="p-6 text-center text-red-400">{error}</div>
+      ) : history.length === 0 ? (
+        <div className="p-6 text-center py-12 text-gray-600">
+          <p className="text-4xl mb-3">📋</p>
+          <p>No completed weeks yet</p>
+        </div>
+      ) : history.map(week => {
         const isOpen = expanded === week.week_number;
         const wins = week.picks.filter(p => p.result === 'win').length;
         const total = week.picks.filter(p => p.result !== 'pending').length;
@@ -66,7 +87,6 @@ export default function History() {
 
         return (
           <div key={week.week_number} className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-            {/* Week header */}
             <button
               onClick={() => setExpanded(isOpen ? null : week.week_number)}
               className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-800 transition-colors"
@@ -85,35 +105,52 @@ export default function History() {
               </div>
             </button>
 
-            {/* Picks breakdown */}
             {isOpen && (
               <div className="border-t border-gray-800 divide-y divide-gray-800">
-                {week.picks.map(pick => {
-                  const pickedTeam = pick.picked_team === 'home' ? pick.home_team : pick.away_team;
-                  const opponent = pick.picked_team === 'home' ? pick.away_team : pick.home_team;
-                  const spread = pick.picked_team === 'home'
-                    ? parseFloat(pick.home_spread)
-                    : -parseFloat(pick.home_spread);
-
-                  return (
-                    <div key={pick.id} className="px-4 py-3 flex items-center justify-between">
+                {week.is_historical ? (
+                  // Historical picks: simplified view
+                  week.picks.map(pick => (
+                    <div key={pick.display_name} className="px-4 py-3 flex items-center justify-between">
                       <div>
                         <p className="font-medium text-sm text-white">{pick.display_name}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {pickedTeam} {formatSpread(spread)} vs {opponent}
+                        <p className={`text-xs mt-0.5 font-mono ${parseFloat(pick.spread_value) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {formatSpread(pick.spread_value)}
                         </p>
-                        {pick.home_score !== null && (
-                          <p className="text-xs text-gray-600 mt-0.5">
-                            Final: {pick.home_team} {pick.home_score}–{pick.away_score} {pick.away_team}
-                          </p>
-                        )}
                       </div>
                       <span className={`text-xs font-bold px-2 py-1 rounded-full ${resultPill(pick.result)}`}>
-                        {pick.result === 'pending' ? '—' : pick.result.toUpperCase()}
+                        {pick.result.toUpperCase()}
                       </span>
                     </div>
-                  );
-                })}
+                  ))
+                ) : (
+                  // Live picks: full game detail
+                  week.picks.map(pick => {
+                    const pickedTeam = pick.picked_team === 'home' ? pick.home_team : pick.away_team;
+                    const opponent = pick.picked_team === 'home' ? pick.away_team : pick.home_team;
+                    const spread = pick.picked_team === 'home'
+                      ? parseFloat(pick.home_spread)
+                      : -parseFloat(pick.home_spread);
+
+                    return (
+                      <div key={pick.id} className="px-4 py-3 flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm text-white">{pick.display_name}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {pickedTeam} {formatSpread(spread)} vs {opponent}
+                          </p>
+                          {pick.home_score !== null && (
+                            <p className="text-xs text-gray-600 mt-0.5">
+                              Final: {pick.home_team} {pick.home_score}–{pick.away_score} {pick.away_team}
+                            </p>
+                          )}
+                        </div>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${resultPill(pick.result)}`}>
+                          {pick.result === 'pending' ? '—' : pick.result.toUpperCase()}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             )}
           </div>

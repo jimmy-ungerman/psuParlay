@@ -42,6 +42,21 @@ export async function initDb() {
   db.exec(`DELETE FROM picks WHERE game_id IN (SELECT id FROM games WHERE strftime('%m', commence_time) < '09')`);
   db.exec(`DELETE FROM games WHERE strftime('%m', commence_time) < '09'`);
 
+  // Migration: historical_picks table
+  const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='historical_picks'`).all();
+  if (tables.length === 0) {
+    db.exec(`CREATE TABLE IF NOT EXISTS historical_picks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      season INTEGER NOT NULL,
+      week_number INTEGER NOT NULL,
+      display_name TEXT NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      result TEXT NOT NULL,
+      spread_value REAL NOT NULL,
+      UNIQUE(season, week_number, display_name)
+    )`);
+  }
+
   // Seed default admin user if configured and no users exist yet
   const seedUsername = process.env.SEED_ADMIN_USERNAME;
   const seedPassword = process.env.SEED_ADMIN_PASSWORD;
