@@ -64,6 +64,10 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'This game has already started — picks are locked' });
     }
 
+    if (new Date(game.commence_time).getDay() !== 6) {
+      return res.status(400).json({ error: 'Only Saturday games are eligible for picks' });
+    }
+
     // Check if another user already claimed this game this week
     const { rows: claimed } = await pool.query(
       `SELECT u.username FROM picks p
