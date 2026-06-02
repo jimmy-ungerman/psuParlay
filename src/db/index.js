@@ -53,8 +53,17 @@ export async function initDb() {
       user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       result TEXT NOT NULL,
       spread_value REAL NOT NULL,
+      picked_team TEXT,
       UNIQUE(season, week_number, display_name)
     )`);
+  } else {
+    const hpCols = db.prepare(`PRAGMA table_info(historical_picks)`).all();
+    if (!hpCols.some(c => c.name === 'picked_team')) {
+      db.exec(`ALTER TABLE historical_picks ADD COLUMN picked_team TEXT`);
+    }
+    if (!hpCols.some(c => c.name === 'canonical_team')) {
+      db.exec(`ALTER TABLE historical_picks ADD COLUMN canonical_team TEXT`);
+    }
   }
 
   // Seed default admin user if configured and no users exist yet
