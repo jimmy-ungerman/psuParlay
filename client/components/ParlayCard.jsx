@@ -113,7 +113,7 @@ export default function ParlayCard() {
   if (error) return <div className="p-6 text-center text-red-400">{error}</div>;
 
   const consensusResult = consensus ? getConsensusResult(consensus.game, consensus.psuSpread) : null;
-  const allLegs = consensusResult ? [...picks, { _consensus: true, result: consensusResult }] : picks;
+  const allLegs = consensus ? [...picks, { _consensus: true, result: consensusResult || 'pending' }] : picks;
   const parlayResult = getParlayResult(allLegs);
   const parlayBanner = {
     win:     { bg: 'bg-green-500/10 border-green-500/30',   text: 'text-green-400',  label: 'Parlay Wins!' },
@@ -189,7 +189,7 @@ export default function ParlayCard() {
         </div>
       ) : null}
 
-      {picks.length === 0 ? (
+      {picks.length === 0 && !consensus ? (
         <div className="text-center py-12 text-gray-600">
           <p className="text-4xl mb-3">🎰</p>
           <p>No picks yet this week</p>
@@ -237,11 +237,11 @@ export default function ParlayCard() {
             {/* Group consensus PSU pick */}
             {consensus && (() => {
               const { game, psuSpread } = consensus;
-              const psuIsHome = game.home_team.includes('Penn State');
-              const opponent = psuIsHome ? game.away_team : game.home_team;
+              const psuIsHome = game ? game.home_team.includes('Penn State') : null;
+              const opponent = game ? (psuIsHome ? game.away_team : game.home_team) : null;
               const location = psuIsHome ? 'vs' : '@';
-              const isLive = game.status === 'in_progress';
-              const isComplete = game.status === 'complete';
+              const isLive = game?.status === 'in_progress';
+              const isComplete = game?.status === 'complete';
               return (
                 <div className="bg-gray-900 rounded-xl border border-blue-500/40 p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -253,8 +253,8 @@ export default function ParlayCard() {
                   </div>
                   <div className="flex items-baseline gap-1 mb-1">
                     <span className="font-bold text-white">Penn State</span>
-                    <span className="text-blue-400 font-semibold">{formatSpread(psuSpread)}</span>
-                    <span className="text-gray-600 text-xs">{location} {opponent}</span>
+                    {psuSpread !== null && <span className="text-blue-400 font-semibold">{formatSpread(psuSpread)}</span>}
+                    {opponent && <span className="text-gray-600 text-xs">{location} {opponent}</span>}
                   </div>
                   {(isLive || isComplete) && game.home_score !== null && (
                     <div className={`mt-2 text-xs font-medium ${isLive ? 'text-yellow-400' : 'text-gray-400'}`}>
