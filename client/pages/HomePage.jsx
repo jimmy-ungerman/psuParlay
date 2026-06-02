@@ -5,11 +5,12 @@ import ParlayCard from '../components/ParlayCard.jsx';
 import Leaderboard from '../components/Leaderboard.jsx';
 import History from '../components/History.jsx';
 import AdminPanel from '../components/AdminPanel.jsx';
+import ConsensusVote from '../components/ConsensusVote.jsx';
 export default function HomePage() {
   const { user, logout } = useAuth();
   const [tab, setTab] = useState('Pick');
 
-  const tabs = ['Pick', 'Parlay', 'Standings', 'History', ...(user?.isAdmin ? ['Admin'] : [])];
+  const tabs = ['Pick', 'Parlay', 'Consensus', 'Standings', 'History', ...(user?.isAdmin ? ['Admin'] : [])];
 
   return (
     <div className="min-h-screen flex flex-col max-w-lg mx-auto">
@@ -50,6 +51,7 @@ export default function HomePage() {
       <main className="flex-1 overflow-y-auto">
         {tab === 'Pick'      && <WeekPicker />}
         {tab === 'Parlay'    && <ParlayCard />}
+        {tab === 'Consensus' && <ConsensusVote />}
         {tab === 'Standings' && <Leaderboard />}
         {tab === 'History'   && <History />}
         {tab === 'Admin'     && <AdminPanel />}

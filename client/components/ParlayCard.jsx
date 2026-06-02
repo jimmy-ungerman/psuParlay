@@ -39,9 +39,21 @@ function getParlayResult(picks) {
   return 'push';
 }
 
+function getConsensusResult(game, psuSpread) {
+  if (!game || game.status !== 'complete' || game.home_score === null) return 'pending';
+  const psuIsHome = game.home_team.includes('Penn State');
+  const psuScore = psuIsHome ? game.home_score : game.away_score;
+  const oppScore = psuIsHome ? game.away_score : game.home_score;
+  const diff = psuScore - oppScore + psuSpread;
+  if (diff > 0) return 'win';
+  if (diff < 0) return 'loss';
+  return 'push';
+}
+
 export default function ParlayCard() {
   const { user: currentUser } = useAuth();
   const [picks, setPicks] = useState([]);
+  const [consensus, setConsensus] = useState(null);
   const [reactions, setReactions] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [parlayRecord, setParlayRecord] = useState(null);
@@ -81,6 +93,10 @@ export default function ParlayCard() {
         setParlayLinks(linkRes);
         setDkInput(linkRes.draftkings_url || '');
         setFdInput(linkRes.fanduel_url || '');
+        try {
+          const cv = await api.getConsensus(res.week, res.season);
+          setConsensus(cv.consensusReached ? cv : null);
+        } catch { setConsensus(null); }
 
       } catch (err) {
         setError(err.message);
@@ -96,7 +112,9 @@ export default function ParlayCard() {
   if (loading) return <div className="p-6 text-center text-gray-500">Loading parlay...</div>;
   if (error) return <div className="p-6 text-center text-red-400">{error}</div>;
 
-  const parlayResult = getParlayResult(picks);
+  const consensusResult = consensus ? getConsensusResult(consensus.game, consensus.psuSpread) : null;
+  const allLegs = consensus ? [...picks, { _consensus: true, result: consensusResult || 'pending' }] : picks;
+  const parlayResult = getParlayResult(allLegs);
   const parlayBanner = {
     win:     { bg: 'bg-green-500/10 border-green-500/30',   text: 'text-green-400',  label: 'Parlay Wins!' },
     loss:    { bg: 'bg-red-500/10 border-red-500/30',       text: 'text-red-400',    label: 'Parlay Loses' },
@@ -108,7 +126,7 @@ export default function ParlayCard() {
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Week {week} Parlay</h2>
-        <span className="text-xs text-gray-600">{picks.length} {picks.length === 1 ? 'leg' : 'legs'}</span>
+        <span className="text-xs text-gray-600">{allLegs.length} {allLegs.length === 1 ? 'leg' : 'legs'}</span>
       </div>
 
       {/* Parlay links — admin can set, everyone can open */}
@@ -171,7 +189,7 @@ export default function ParlayCard() {
         </div>
       ) : null}
 
-      {picks.length === 0 ? (
+      {picks.length === 0 && !consensus ? (
         <div className="text-center py-12 text-gray-600">
           <p className="text-4xl mb-3">🎰</p>
           <p>No picks yet this week</p>
@@ -208,7 +226,7 @@ export default function ParlayCard() {
             <div className="flex items-center justify-between">
               <span className={`font-bold ${parlayBanner.text}`}>{parlayBanner.label}</span>
               <span className="text-sm text-gray-500">
-                {picks.filter(p => p.result === 'win').length}/{picks.length} covering
+                {allLegs.filter(p => p.result === 'win').length}/{allLegs.length} covering
               </span>
             </div>
           </div>
@@ -216,6 +234,40 @@ export default function ParlayCard() {
 
           {/* Individual picks */}
           <div className="space-y-3">
+            {/* Group consensus PSU pick */}
+            {consensus && (() => {
+              const { game, psuSpread } = consensus;
+              const psuIsHome = game ? game.home_team.includes('Penn State') : null;
+              const opponent = game ? (psuIsHome ? game.away_team : game.home_team) : null;
+              const location = psuIsHome ? 'vs' : '@';
+              const isLive = game?.status === 'in_progress';
+              const isComplete = game?.status === 'complete';
+              return (
+                <div className="bg-gray-900 rounded-xl border border-blue-500/40 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-white text-sm">PSU Pick</span>
+                      <span className="text-xs bg-blue-500/20 text-blue-400 font-semibold px-2 py-0.5 rounded-full">GROUP</span>
+                    </div>
+                    {resultBadge(consensusResult)}
+                  </div>
+                  <div className="flex items-baseline gap-1 mb-1">
+                    <span className="font-bold text-white">Penn State</span>
+                    {psuSpread !== null && <span className="text-blue-400 font-semibold">{formatSpread(psuSpread)}</span>}
+                    {opponent && <span className="text-gray-600 text-xs">{location} {opponent}</span>}
+                  </div>
+                  {(isLive || isComplete) && game.home_score !== null && (
+                    <div className={`mt-2 text-xs font-medium ${isLive ? 'text-yellow-400' : 'text-gray-400'}`}>
+                      {isLive && <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5 animate-pulse" />}
+                      {game.home_abbr} {game.home_score} – {game.away_score} {game.away_abbr}
+                      {isLive && ' (Live)'}
+                      {isComplete && ' (Final)'}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             {picks.map(pick => {
               const isTotalPick = pick.picked_team === 'over' || pick.picked_team === 'under';
               const pickedTeam = isTotalPick ? (pick.picked_team === 'over' ? 'Over' : 'Under') : (pick.picked_team === 'home' ? pick.home_team : pick.away_team);

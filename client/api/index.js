@@ -54,6 +54,10 @@ export const api = {
   getParlayRecord: () => request('GET', '/stats/parlay-record'),
   getH2H: (userId) => request('GET', `/stats/h2h/${userId}`),
 
+  // Consensus PSU vote
+  getConsensus: (week, season) => request('GET', `/consensus?week=${week}&season=${season}`),
+  voteConsensus: (week, season, vote) => request('POST', '/consensus/vote', { week, season, vote }),
+
   // Parlay link
   getParlayLink: (week, season) => {
     const qs = week && season ? `?week=${week}&season=${season}` : '';
