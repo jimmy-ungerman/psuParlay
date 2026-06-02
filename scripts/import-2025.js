@@ -90,6 +90,9 @@ function parseAbbrev(pickedTeam) {
 }
 
 function canonicalize(pickedTeam) {
+  if (!pickedTeam) return null;
+  // Totals picks (Over/Under X) have no canonical team
+  if (/^(Over|Under)\s+[\d.]+$/i.test(pickedTeam)) return null;
   const abbrev = parseAbbrev(pickedTeam);
   if (!abbrev) return null;
   return ABBREV_MAP[abbrev] ?? null;
@@ -201,8 +204,8 @@ const DATA = [
   ['Tanner', 5,  'loss', -9.5,  'PSU -3.5'],
   ['Tanner', 7,  'loss', -6.5,  'Auburn +3.5'],
   ['Tanner', 9,  'win',  13.5,  'Ole Miss +5.5'],
-  ['Tanner', 10, 'win',  7,     'O55.5 Ole/SC'],
-  ['Tanner', 11, 'win',  6,     'Stan/UNC U42.5'],
+  ['Tanner', 10, 'win',  7,     'Under 55.5'],
+  ['Tanner', 11, 'win',  6,     'Under 42.5'],
 
   // GMoney2458 (Grant Grasha)
   ['GMoney2458', 1,  'win',  18.5,  'Oregon -27.5'],
@@ -284,8 +287,9 @@ for (const name of allNames) {
 
 let inserted = 0;
 for (const [displayName, week, result, spreadValue, pickedTeam] of DATA) {
+  const isTotalsPick = pickedTeam && /^(Over|Under)\s+[\d.]+$/i.test(pickedTeam);
   const canonical = pickedTeam ? canonicalize(pickedTeam) : null;
-  if (pickedTeam && !canonical) {
+  if (pickedTeam && !canonical && !isTotalsPick) {
     const abbrev = parseAbbrev(pickedTeam);
     if (!unknownAbbrevs.has(abbrev)) {
       console.warn(`Warning: no canonical mapping for '${abbrev}' (from '${pickedTeam}')`);
