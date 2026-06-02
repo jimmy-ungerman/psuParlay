@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { api } from '../api/index.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { matchesSearch, CONF_ORDER } from '../utils/conferences.js';
+import { matchesSearch, CONF_ORDER, getConference } from '../utils/conferences.js';
 
 function formatSpread(spread) {
   const n = parseFloat(spread);
@@ -96,13 +96,13 @@ export default function WeekPicker() {
 
   // Build conference tabs from games actually present this week, in standard order
   const conferences = useMemo(() => {
-    const present = new Set(games.map(g => g.conference).filter(Boolean));
+    const present = new Set(games.map(g => g.conference || getConference(g.home_team)));
     return ['All', ...CONF_ORDER.filter(c => present.has(c))];
   }, [games]);
 
   const filteredGames = useMemo(() => {
     return games.filter(g => {
-      const matchesConf = activeConf === 'All' || g.conference === activeConf;
+      const matchesConf = activeConf === 'All' || (g.conference || getConference(g.home_team)) === activeConf;
       return matchesConf && matchesSearch(g, search);
     });
   }, [games, activeConf, search]);
