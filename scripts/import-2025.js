@@ -180,16 +180,27 @@ const insert = db.prepare(`
     user_id = excluded.user_id
 `);
 
+// Pre-resolve user IDs
+const userIdCache = {};
+const warned = new Set();
+for (const displayName of Object.keys(USERNAME_MAP)) {
+  const username = USERNAME_MAP[displayName];
+  if (!username) { userIdCache[displayName] = null; continue; }
+  const row = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  if (row) {
+    userIdCache[displayName] = row.id;
+  } else {
+    userIdCache[displayName] = null;
+    if (!warned.has(username)) {
+      console.warn(`Warning: username '${username}' not found in DB (for ${displayName})`);
+      warned.add(username);
+    }
+  }
+}
+
 let inserted = 0;
 for (const [displayName, week, result, spreadValue] of DATA) {
-  const username = USERNAME_MAP[displayName];
-  let userId = null;
-  if (username) {
-    const row = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
-    if (row) userId = row.id;
-    else console.warn(`Warning: username '${username}' not found in DB (for ${displayName})`);
-  }
-  insert.run(2025, week, displayName, userId, result, spreadValue);
+  insert.run(2025, week, displayName, userIdCache[displayName] ?? null, result, spreadValue);
   inserted++;
 }
 
