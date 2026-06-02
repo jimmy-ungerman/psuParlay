@@ -113,6 +113,9 @@ export default function History() {
                     <div key={pick.display_name} className="px-4 py-3 flex items-center justify-between">
                       <div>
                         <p className="font-medium text-sm text-white">{pick.display_name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {pick.picked_team || '—'}
+                        </p>
                         <p className={`text-xs mt-0.5 font-mono ${parseFloat(pick.spread_value) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                           {formatSpread(pick.spread_value)}
                         </p>
