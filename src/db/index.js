@@ -39,6 +39,7 @@ export async function initDb() {
   }
 
   // Remove week 0 games (before September of their season year)
+  db.exec(`DELETE FROM picks WHERE game_id IN (SELECT id FROM games WHERE strftime('%m', commence_time) < '09')`);
   db.exec(`DELETE FROM games WHERE strftime('%m', commence_time) < '09'`);
 
   // Seed default admin user if configured and no users exist yet
