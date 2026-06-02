@@ -10,8 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: write
 
     steps:
+      - name: Set up crane
+        uses: imjasonh/setup-crane@v0.4
+
+      - name: Delete PR image from GHCR
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ghcr.io \
+            --username ${{ github.actor }} \
+            --password-stdin
+          crane delete ghcr.io/${{ github.repository_owner }}/psu-parlay:pr-${PR_NUMBER} || true
+
       - name: Suspend staging Kustomization in GitOps repo
         env:
           GITOPS_PAT: ${{ secrets.GITOPS_PAT }}
