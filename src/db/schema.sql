@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS historical_picks (
   result TEXT NOT NULL,
   spread_value REAL NOT NULL,
   picked_team TEXT,
+  canonical_team TEXT,
   UNIQUE(season, week_number, display_name)
 );
 

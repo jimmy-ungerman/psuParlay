@@ -61,6 +61,9 @@ export async function initDb() {
     if (!hpCols.some(c => c.name === 'picked_team')) {
       db.exec(`ALTER TABLE historical_picks ADD COLUMN picked_team TEXT`);
     }
+    if (!hpCols.some(c => c.name === 'canonical_team')) {
+      db.exec(`ALTER TABLE historical_picks ADD COLUMN canonical_team TEXT`);
+    }
   }
 
   // Seed default admin user if configured and no users exist yet

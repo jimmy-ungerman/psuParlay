@@ -11,6 +11,90 @@ mkdirSync(dirname(DB_PATH), { recursive: true });
 const db = new DatabaseSync(DB_PATH);
 db.exec('PRAGMA foreign_keys = ON');
 
+// Abbreviation → ESPN canonical team name
+// null = not a team pick (totals bet, etc.)
+const ABBREV_MAP = {
+  'A&M':       'Texas A&M',
+  'AF':        'Air Force',
+  'AppState':  'Appalachian State',
+  'Army':      'Army',
+  'Auburn':    'Auburn',
+  'AzST':      'Arizona State',
+  'BYU':       'BYU',
+  'Bama':      'Alabama',
+  'Cincy':     'Cincinnati',
+  'Clem':      'Clemson',
+  'Coastal':   'Coastal Carolina',
+  'Colorado':  'Colorado',
+  'Duke':      'Duke',
+  'ECU':       'East Carolina',
+  'GT':        'Georgia Tech',
+  'Georgia':   'Georgia',
+  'Illinois':  'Illinois',
+  'Indiana':   'Indiana',
+  'Iowa':      'Iowa',
+  'Iowa St':   'Iowa State',
+  'JMU':       'James Madison',
+  'K State':   'Kansas State',
+  'Kansas':    'Kansas',
+  'Kennesaw':  'Kennesaw State',
+  'Lehigh':    'Lehigh',
+  'Lville':    'Louisville',
+  'Marshall':  'Marshall',
+  'Maryland':  'Maryland',
+  'Memphis':   'Memphis',
+  'Miami':     'Miami',
+  'Minn':      'Minnesota',
+  'Missou':    'Missouri',
+  'Mizzou':    'Missouri',
+  'ND':        'Notre Dame',
+  'NWestern':  'Northwestern',
+  'Nwestrn':   'Northwestern',
+  'OK':        'Oklahoma',
+  'OSU':       'Ohio State',
+  'Oklahoma':  'Oklahoma',
+  'Ole Miss':  'Ole Miss',
+  'Oregon':    'Oregon',
+  'PSU':       'Penn State',
+  'Pitt':      'Pittsburgh',
+  'Rice':      'Rice',
+  'SC':        'South Carolina',
+  'SDSU':      'San Diego State',
+  'SMU':       'SMU',
+  'Stan':      'Stanford',
+  'Ten':       'Tennessee',
+  'Tenn':      'Tennessee',
+  'Texas Tech':'Texas Tech',
+  'Toledo':    'Toledo',
+  'UCF':       'UCF',
+  'UCLA':      'UCLA',
+  'UCONN':     'UConn',
+  'UConn':     'UConn',
+  'UK':        'Kentucky',
+  'UNLV':      'UNLV',
+  'USC':       'USC',
+  'USF':       'South Florida',
+  'UTSA':      'UTSA',
+  'Utah':      'Utah',
+  'VA':        'Virginia',
+  'Vandy':     'Vanderbilt',
+  'WVU':       'West Virginia',
+  'Wash':      'Washington',
+};
+
+// Extracts team abbreviation from a pick string like "Ten -13.5" → "Ten"
+function parseAbbrev(pickedTeam) {
+  if (!pickedTeam) return null;
+  // Strip trailing spread (e.g. " -13.5", " +7.5")
+  return pickedTeam.replace(/\s+[+-][\d.]+$/, '').trim();
+}
+
+function canonicalize(pickedTeam) {
+  const abbrev = parseAbbrev(pickedTeam);
+  if (!abbrev) return null;
+  return ABBREV_MAP[abbrev] ?? null;
+}
+
 // Ensure table exists and has picked_team column
 db.exec(`CREATE TABLE IF NOT EXISTS historical_picks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,11 +105,15 @@ db.exec(`CREATE TABLE IF NOT EXISTS historical_picks (
   result TEXT NOT NULL,
   spread_value REAL NOT NULL,
   picked_team TEXT,
+  canonical_team TEXT,
   UNIQUE(season, week_number, display_name)
 )`);
 const hpCols = db.prepare(`PRAGMA table_info(historical_picks)`).all();
 if (!hpCols.some(c => c.name === 'picked_team')) {
   db.exec(`ALTER TABLE historical_picks ADD COLUMN picked_team TEXT`);
+}
+if (!hpCols.some(c => c.name === 'canonical_team')) {
+  db.exec(`ALTER TABLE historical_picks ADD COLUMN canonical_team TEXT`);
 }
 
 // CSV display name → registered username (null = unregistered)
@@ -175,13 +263,14 @@ const DATA = [
 ];
 
 const insert = db.prepare(`
-  INSERT INTO historical_picks (season, week_number, display_name, user_id, result, spread_value, picked_team)
-  VALUES (?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO historical_picks (season, week_number, display_name, user_id, result, spread_value, picked_team, canonical_team)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   ON CONFLICT (season, week_number, display_name) DO UPDATE SET
     result = excluded.result,
     spread_value = excluded.spread_value,
     user_id = excluded.user_id,
-    picked_team = excluded.picked_team
+    picked_team = excluded.picked_team,
+    canonical_team = excluded.canonical_team
 `);
 
 // Pre-resolve user IDs
@@ -203,8 +292,17 @@ for (const displayName of Object.keys(USERNAME_MAP)) {
 }
 
 let inserted = 0;
+const unknownAbbrevs = new Set();
 for (const [displayName, week, result, spreadValue, pickedTeam] of DATA) {
-  insert.run(2025, week, displayName, userIdCache[displayName] ?? null, result, spreadValue, pickedTeam ?? null);
+  const canonical = pickedTeam ? canonicalize(pickedTeam) : null;
+  if (pickedTeam && !canonical) {
+    const abbrev = parseAbbrev(pickedTeam);
+    if (!unknownAbbrevs.has(abbrev)) {
+      console.warn(`Warning: no canonical mapping for '${abbrev}' (from '${pickedTeam}')`);
+      unknownAbbrevs.add(abbrev);
+    }
+  }
+  insert.run(2025, week, displayName, userIdCache[displayName] ?? null, result, spreadValue, pickedTeam ?? null, canonical);
   inserted++;
 }
 
