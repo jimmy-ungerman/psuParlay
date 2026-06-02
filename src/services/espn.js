@@ -2,6 +2,24 @@ import axios from 'axios';
 
 const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/college-football';
 
+const CONF_NAME_MAP = {
+  'Southeastern Conference': 'SEC',
+  'Big Ten Conference': 'Big Ten',
+  'Big 12 Conference': 'Big 12',
+  'Atlantic Coast Conference': 'ACC',
+  'Mountain West Conference': 'Mtn West',
+  'American Athletic Conference': 'AAC',
+  'Mid-American Conference': 'MAC',
+  'Sun Belt Conference': 'Sun Belt',
+  'Conference USA': 'CUSA',
+  'FBS Independents': 'Ind.',
+};
+
+function normalizeConference(name) {
+  if (!name) return null;
+  return CONF_NAME_MAP[name] ?? name;
+}
+
 export async function getCurrentWeekGames() {
   const res = await axios.get(`${ESPN_BASE}/scoreboard`, { timeout: 10000 });
   return parseScoreboard(res.data);
@@ -47,6 +65,7 @@ export function parseEvent(event) {
     awayTeam: away?.team?.displayName || 'TBD',
     homeAbbr: home?.team?.abbreviation || '???',
     awayAbbr: away?.team?.abbreviation || '???',
+    conference: normalizeConference(comp?.groups?.name),
     commenceTime: event.date,
     status: mapStatus(statusName),
     homeScore: home?.score !== undefined && home.score !== '' ? parseInt(home.score) : null,

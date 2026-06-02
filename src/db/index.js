@@ -31,6 +31,11 @@ export async function initDb() {
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf-8');
   db.exec(schema);
+  // Migrations for columns added after initial schema
+  const cols = db.prepare(`PRAGMA table_info(games)`).all();
+  if (!cols.some(c => c.name === 'conference')) {
+    db.exec(`ALTER TABLE games ADD COLUMN conference TEXT`);
+  }
   console.log('Database initialized');
 }
 

@@ -73,11 +73,11 @@ async function seedWithMockSpreads(events, week, season) {
   for (const event of events) {
     const spread = generateMockSpread();
     const { rows: inserted } = await pool.query(
-      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, commence_time, week_number, season, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, commence_time, week_number, season, status, conference)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        ON CONFLICT (espn_id) DO NOTHING RETURNING id`,
       [event.espnId, event.homeTeam, event.awayTeam, event.homeAbbr, event.awayAbbr,
-       spread, event.commenceTime, week, season, event.status]
+       spread, event.commenceTime, week, season, event.status, event.conference]
     );
     if (inserted.length > 0) {
       await pool.query('INSERT INTO odds_snapshots (game_id, home_spread) VALUES ($1, $2)', [inserted[0].id, spread]);
@@ -102,11 +102,11 @@ async function seedWithRealOdds(events, week, season) {
     if (!oddsGame) console.warn(`No odds match for ${event.homeTeam} vs ${event.awayTeam}, using mock spread`);
 
     const { rows: inserted } = await pool.query(
-      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, commence_time, week_number, season, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, commence_time, week_number, season, status, conference)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        ON CONFLICT (espn_id) DO NOTHING RETURNING id`,
       [event.espnId, event.homeTeam, event.awayTeam, event.homeAbbr, event.awayAbbr,
-       spread, event.commenceTime, week, season, event.status]
+       spread, event.commenceTime, week, season, event.status, event.conference]
     );
     if (inserted.length > 0) {
       await pool.query('INSERT INTO odds_snapshots (game_id, home_spread) VALUES ($1, $2)', [inserted[0].id, spread]);
