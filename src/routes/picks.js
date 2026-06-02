@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import pool from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
-import { spreadForTeam } from '../services/results.js';
+import { spreadForTeam, getPickDeadline } from '../services/results.js';
 const router = Router();
 
 // GET /api/picks?week=&season=
@@ -60,8 +60,12 @@ router.post('/', requireAuth, async (req, res) => {
     if (gameRows.length === 0) return res.status(404).json({ error: 'Game not found' });
     const game = gameRows[0];
 
-    if (new Date(game.commence_time) <= new Date()) {
-      return res.status(400).json({ error: 'This game has already started — picks are locked' });
+    if (new Date() >= getPickDeadline(game.commence_time)) {
+      return res.status(400).json({ error: 'Pick deadline has passed — picks lock at 11:30 AM ET Saturday' });
+    }
+
+    if (new Date(game.commence_time).getDay() !== 6) {
+      return res.status(400).json({ error: 'Only Saturday games are eligible for picks' });
     }
 
     // Check if another user already claimed this game this week

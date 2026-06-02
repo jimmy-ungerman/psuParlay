@@ -57,7 +57,11 @@ async function ensureGamesSeeded() {
     [week, season]
   );
   const existingIds = new Set(existing.map(r => r.espn_id));
-  const newEvents = events.filter(e => !existingIds.has(e.espnId));
+
+  // Exclude week 0 games — only seed games from September onwards
+  const seasonStart = new Date(`${season}-09-01T00:00:00Z`);
+  const eligibleEvents = events.filter(e => new Date(e.commenceTime) >= seasonStart);
+  const newEvents = eligibleEvents.filter(e => !existingIds.has(e.espnId));
 
   // Backfill conference for any existing games that are missing it
   const needsConference = events.filter(e => existingIds.has(e.espnId) && e.conference);

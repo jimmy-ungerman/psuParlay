@@ -73,8 +73,19 @@ export default function WeekPicker() {
 
   // Countdown to first kickoff
   const deadline = useMemo(() => {
-    const future = games.map(g => new Date(g.commence_time)).filter(d => d > new Date());
-    return future.length ? new Date(Math.min(...future)) : null;
+    const saturdays = games.filter(g => new Date(g.commence_time).getDay() === 6);
+    if (!saturdays.length) return null;
+    const firstSaturday = new Date(Math.min(...saturdays.map(g => new Date(g.commence_time))));
+    const dateStr = firstSaturday.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const [year, month, day] = dateStr.split('-').map(Number);
+    for (const offset of [4, 5]) {
+      const candidate = new Date(Date.UTC(year, month - 1, day, 11 + offset, 30));
+      const easternHour = parseInt(
+        candidate.toLocaleString('en-US', { timeZone: 'America/New_York', hour: '2-digit', hour12: false })
+      );
+      if (easternHour === 11) return candidate;
+    }
+    return null;
   }, [games]);
 
   const [timeLeft, setTimeLeft] = useState(null);
@@ -97,7 +108,7 @@ export default function WeekPicker() {
   // Build conference tabs from games actually present this week, in standard order
   const conferences = useMemo(() => {
     const present = new Set();
-    games.forEach(g => {
+    games.filter(g => new Date(g.commence_time).getDay() === 6).forEach(g => {
       present.add(g.conference || getConference(g.home_team));
       present.add(getConference(g.away_team));
     });
@@ -106,6 +117,7 @@ export default function WeekPicker() {
 
   const filteredGames = useMemo(() => {
     return games.filter(g => {
+      if (new Date(g.commence_time).getDay() !== 6) return false;
       const homeConf = g.conference || getConference(g.home_team);
       const awayConf = getConference(g.away_team);
       const matchesConf = activeConf === 'All' || homeConf === activeConf || awayConf === activeConf;
@@ -125,7 +137,7 @@ export default function WeekPicker() {
     );
   }
 
-  const isLocked = (game) => new Date(game.commence_time) <= new Date();
+  const isLocked = () => deadline ? new Date() >= deadline : false;
 
   return (
     <div className="p-4 space-y-4">
