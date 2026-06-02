@@ -78,11 +78,18 @@ async function refreshRealSpreads() {
     if (!match) continue;
 
     const newSpread = match.homeSpread;
-    if (parseFloat(newSpread) === parseFloat(game.home_spread)) continue;
+    const newTotal = match.total ?? null;
+    const spreadChanged = parseFloat(newSpread) !== parseFloat(game.home_spread);
+    const totalChanged = newTotal !== null && parseFloat(newTotal) !== parseFloat(game.total);
 
-    await pool.query(`UPDATE games SET home_spread = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [newSpread, game.id]);
+    if (!spreadChanged && !totalChanged) continue;
+
+    await pool.query(
+      `UPDATE games SET home_spread = $1, total = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`,
+      [newSpread, newTotal, game.id]
+    );
     await pool.query(`INSERT INTO odds_snapshots (game_id, home_spread) VALUES ($1, $2)`, [game.id, newSpread]);
-    console.log(`Spread updated: ${game.home_team} vs ${game.away_team}: ${game.home_spread} → ${newSpread}`);
+    console.log(`Odds updated: ${game.home_team} vs ${game.away_team}: spread ${game.home_spread} → ${newSpread}, total ${game.total} → ${newTotal}`);
   }
 }
 

@@ -37,6 +37,9 @@ export async function initDb() {
   if (!cols.some(c => c.name === 'conference')) {
     db.exec(`ALTER TABLE games ADD COLUMN conference TEXT`);
   }
+  if (!cols.some(c => c.name === 'total')) {
+    db.exec(`ALTER TABLE games ADD COLUMN total REAL`);
+  }
 
   // Remove week 0 games (before September of their season year)
   db.exec(`DELETE FROM picks WHERE game_id IN (SELECT id FROM games WHERE strftime('%m', commence_time) < '09')`);

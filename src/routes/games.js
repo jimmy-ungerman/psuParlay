@@ -2,7 +2,7 @@ import { Router } from 'express';
 import pool from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { getCurrentWeekGames } from '../services/espn.js';
-import { fetchOddsApiGames, generateMockSpread, isMockMode, teamsMatch } from '../services/odds.js';
+import { fetchOddsApiGames, generateMockSpread, generateMockTotal, isMockMode, teamsMatch } from '../services/odds.js';
 
 const router = Router();
 
@@ -86,12 +86,13 @@ async function ensureGamesSeeded() {
 async function seedWithMockSpreads(events, week, season) {
   for (const event of events) {
     const spread = generateMockSpread();
+    const total = generateMockTotal();
     const { rows: inserted } = await pool.query(
-      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, commence_time, week_number, season, status, conference)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, total, commence_time, week_number, season, status, conference)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
        ON CONFLICT (espn_id) DO UPDATE SET conference = excluded.conference WHERE games.conference IS NULL RETURNING id`,
       [event.espnId, event.homeTeam, event.awayTeam, event.homeAbbr, event.awayAbbr,
-       spread, event.commenceTime, week, season, event.status, event.conference]
+       spread, total, event.commenceTime, week, season, event.status, event.conference]
     );
     if (inserted.length > 0) {
       await pool.query('INSERT INTO odds_snapshots (game_id, home_spread) VALUES ($1, $2)', [inserted[0].id, spread]);
@@ -113,14 +114,15 @@ async function seedWithRealOdds(events, week, season) {
       o => teamsMatch(o.homeTeam, event.homeTeam) && teamsMatch(o.awayTeam, event.awayTeam)
     );
     const spread = oddsGame?.homeSpread ?? generateMockSpread();
+    const total = oddsGame?.total ?? generateMockTotal();
     if (!oddsGame) console.warn(`No odds match for ${event.homeTeam} vs ${event.awayTeam}, using mock spread`);
 
     const { rows: inserted } = await pool.query(
-      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, commence_time, week_number, season, status, conference)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, total, commence_time, week_number, season, status, conference)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
        ON CONFLICT (espn_id) DO UPDATE SET conference = excluded.conference WHERE games.conference IS NULL RETURNING id`,
       [event.espnId, event.homeTeam, event.awayTeam, event.homeAbbr, event.awayAbbr,
-       spread, event.commenceTime, week, season, event.status, event.conference]
+       spread, total, event.commenceTime, week, season, event.status, event.conference]
     );
     if (inserted.length > 0) {
       await pool.query('INSERT INTO odds_snapshots (game_id, home_spread) VALUES ($1, $2)', [inserted[0].id, spread]);

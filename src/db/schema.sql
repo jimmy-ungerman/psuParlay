@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS games (
   home_score INTEGER,
   away_score INTEGER,
   conference TEXT,
+  total REAL,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
