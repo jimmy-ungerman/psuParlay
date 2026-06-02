@@ -15,6 +15,7 @@ import reactionRoutes from './routes/reactions.js';
 import commentRoutes from './routes/comments.js';
 import userRoutes from './routes/users.js';
 import statsRoutes from './routes/stats.js';
+import parlayLinkRoutes from './routes/parlayLink.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -36,6 +37,7 @@ app.use('/api/reactions', reactionRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/parlay-link', parlayLinkRoutes);
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
 // Serve the built frontend

@@ -52,4 +52,12 @@ export const api = {
   getUsers: () => request('GET', '/users'),
   getParlayRecord: () => request('GET', '/stats/parlay-record'),
   getH2H: (userId) => request('GET', `/stats/h2h/${userId}`),
+
+  // Parlay link
+  getParlayLink: (week, season) => {
+    const qs = week && season ? `?week=${week}&season=${season}` : '';
+    return request('GET', `/parlay-link${qs}`);
+  },
+  setParlayLink: (week, season, draftkings_url, fanduel_url) =>
+    request('PUT', '/parlay-link', { week, season, draftkings_url, fanduel_url }),
 };
