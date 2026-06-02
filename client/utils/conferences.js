@@ -1,5 +1,5 @@
 // Conference display order
-export const CONF_ORDER = ['SEC', 'Big Ten', 'Big 12', 'ACC', 'Mtn West', 'AAC', 'MAC', 'Sun Belt', 'CUSA', 'Ind.', 'Other'];
+export const CONF_ORDER = ['SEC', 'Big Ten', 'Big 12', 'ACC', 'Pac-12', 'Mtn West', 'AAC', 'MAC', 'Sun Belt', 'CUSA', 'Ind.', 'Other'];
 
 const TEAMS = {
   // SEC
@@ -33,12 +33,15 @@ const TEAMS = {
   'Boston College': 'ACC', 'Syracuse': 'ACC', 'California Golden Bears': 'ACC',
   'Stanford': 'ACC', 'SMU Mustangs': 'ACC',
 
+  // Pac-12
+  'Oregon State': 'Pac-12', 'Washington State': 'Pac-12', 'Boise State': 'Pac-12',
+  'Colorado State': 'Pac-12', 'Fresno State': 'Pac-12', 'San Diego State': 'Pac-12',
+  'Utah State': 'Pac-12', 'Texas State': 'Pac-12',
+
   // Mountain West
-  'Boise State': 'Mtn West', 'Fresno State': 'Mtn West', 'Nevada Wolf Pack': 'Mtn West',
-  'UNLV': 'Mtn West', 'Colorado State': 'Mtn West', 'Wyoming': 'Mtn West',
+  'Nevada Wolf Pack': 'Mtn West', 'UNLV': 'Mtn West', 'Wyoming': 'Mtn West',
   'Air Force': 'Mtn West', 'New Mexico Lobos': 'Mtn West', 'San José State': 'Mtn West',
-  'San Jose State': 'Mtn West', 'San Diego State': 'Mtn West', 'Hawaii': 'Mtn West',
-  'Utah State': 'Mtn West',
+  'San Jose State': 'Mtn West', 'Hawaii': 'Mtn West',
 
   // AAC
   'Memphis Tigers': 'AAC', 'Navy Midshipmen': 'AAC', 'Tulane': 'AAC',
@@ -57,7 +60,7 @@ const TEAMS = {
   'Louisiana Ragin': 'Sun Belt', 'Appalachian State': 'Sun Belt',
   'Georgia Southern': 'Sun Belt', 'South Alabama': 'Sun Belt',
   'Arkansas State': 'Sun Belt', 'Louisiana Monroe': 'Sun Belt',
-  'Troy Trojans': 'Sun Belt', 'Texas State': 'Sun Belt',
+  'Troy Trojans': 'Sun Belt',
   'Georgia State': 'Sun Belt', 'Marshall Thundering': 'Sun Belt',
   'Southern Miss': 'Sun Belt', 'Old Dominion': 'Sun Belt',
   'James Madison': 'Sun Belt', 'Coastal Carolina': 'Sun Belt',

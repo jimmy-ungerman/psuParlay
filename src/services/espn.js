@@ -13,6 +13,7 @@ const CONF_NAME_MAP = {
   'Sun Belt Conference': 'Sun Belt',
   'Conference USA': 'CUSA',
   'FBS Independents': 'Ind.',
+  'Pac-12 Conference': 'Pac-12',
 };
 
 function normalizeConference(name) {
