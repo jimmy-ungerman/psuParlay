@@ -81,6 +81,7 @@ export default function ParlayCard() {
         setParlayLinks(linkRes);
         setDkInput(linkRes.draftkings_url || '');
         setFdInput(linkRes.fanduel_url || '');
+
       } catch (err) {
         setError(err.message);
       } finally {
@@ -133,7 +134,8 @@ export default function ParlayCard() {
             onClick={async () => {
               setLinkSaving(true);
               try {
-                const res = await api.setParlayLink(week, season, dkInput.trim() || null, fdInput.trim() || null);
+                const normalize = u => u ? (u.startsWith('http') ? u : `https://${u}`) : null;
+                const res = await api.setParlayLink(week, season, normalize(dkInput.trim()), normalize(fdInput.trim()));
                 setParlayLinks(res);
               } finally {
                 setLinkSaving(false);
