@@ -1,12 +1,6 @@
 name: Build Helm Chart
 
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
-    paths:
-      - "charts/**"
-      - ".github/workflows/build-helm.yml"
   pull_request:
     branches: [main]
     paths:
