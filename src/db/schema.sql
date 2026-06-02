@@ -72,6 +72,15 @@ CREATE TABLE IF NOT EXISTS comments (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS parlay_links (
+  week_number INTEGER NOT NULL,
+  season INTEGER NOT NULL,
+  draftkings_url TEXT,
+  fanduel_url TEXT,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (week_number, season)
+);
+
 CREATE TABLE IF NOT EXISTS push_subscriptions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,

@@ -49,6 +49,10 @@ export default function ParlayCard() {
   const [season, setSeason] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [parlayLinks, setParlayLinks] = useState({ draftkings_url: null, fanduel_url: null });
+  const [dkInput, setDkInput] = useState('');
+  const [fdInput, setFdInput] = useState('');
+  const [linkSaving, setLinkSaving] = useState(false);
 
   const loadReactions = useCallback(async (w, s) => {
     if (!w || !s) return;
@@ -73,6 +77,10 @@ export default function ParlayCard() {
         setAllUsers(usersRes.users || []);
         setParlayRecord(recordRes.allTime || null);
         await loadReactions(res.week, res.season);
+        const linkRes = await api.getParlayLink(res.week, res.season);
+        setParlayLinks(linkRes);
+        setDkInput(linkRes.draftkings_url || '');
+        setFdInput(linkRes.fanduel_url || '');
       } catch (err) {
         setError(err.message);
       } finally {
@@ -101,6 +109,65 @@ export default function ParlayCard() {
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Week {week} Parlay</h2>
         <span className="text-xs text-gray-600">{picks.length} {picks.length === 1 ? 'leg' : 'legs'}</span>
       </div>
+
+      {/* Parlay links — admin can set, everyone can open */}
+      {currentUser?.isAdmin ? (
+        <div className="space-y-2">
+          {[
+            { label: 'DraftKings', value: dkInput, onChange: setDkInput },
+            { label: 'FanDuel',    value: fdInput, onChange: setFdInput },
+          ].map(({ label, value, onChange }) => (
+            <div key={label} className="flex gap-2">
+              <span className="text-xs text-gray-500 font-medium w-24 shrink-0 flex items-center">{label}</span>
+              <input
+                type="url"
+                value={value}
+                onChange={e => onChange(e.target.value)}
+                placeholder={`Paste ${label} parlay link...`}
+                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          ))}
+          <button
+            disabled={linkSaving}
+            onClick={async () => {
+              setLinkSaving(true);
+              try {
+                const res = await api.setParlayLink(week, season, dkInput.trim() || null, fdInput.trim() || null);
+                setParlayLinks(res);
+              } finally {
+                setLinkSaving(false);
+              }
+            }}
+            className="w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg"
+          >
+            {linkSaving ? 'Saving...' : 'Save Links'}
+          </button>
+        </div>
+      ) : (parlayLinks.draftkings_url || parlayLinks.fanduel_url) ? (
+        <div className="flex gap-2">
+          {parlayLinks.draftkings_url && (
+            <a
+              href={parlayLinks.draftkings_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1.5 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-400 font-medium text-sm rounded-xl px-4 py-3"
+            >
+              🎰 DraftKings
+            </a>
+          )}
+          {parlayLinks.fanduel_url && (
+            <a
+              href={parlayLinks.fanduel_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 font-medium text-sm rounded-xl px-4 py-3"
+            >
+              🎰 FanDuel
+            </a>
+          )}
+        </div>
+      ) : null}
 
       {picks.length === 0 ? (
         <div className="text-center py-12 text-gray-600">
