@@ -108,22 +108,40 @@ export default function History() {
             {isOpen && (
               <div className="border-t border-gray-800 divide-y divide-gray-800">
                 {week.is_historical ? (
-                  // Historical picks: simplified view
+                  // Historical picks
                   week.picks.map(pick => {
                     const hasGame = pick.home_team != null;
+                    const isTeamPick = pick.canonical_team != null;
+
+                    // Determine full team names from game data
+                    let pickedFullTeam = null, opponent = null;
+                    if (isTeamPick && hasGame) {
+                      const canon = pick.canonical_team.toLowerCase();
+                      const homeMatch = pick.home_team.toLowerCase().includes(canon);
+                      pickedFullTeam = homeMatch ? pick.home_team : pick.away_team;
+                      opponent = homeMatch ? pick.away_team : pick.home_team;
+                    }
+
+                    // Extract spread from raw pick text (e.g. "Ten -13.5" → -13.5)
+                    const spreadMatch = pick.picked_team?.match(/([+-]?\d+\.?\d*)$/);
+                    const spreadText = spreadMatch ? formatSpread(parseFloat(spreadMatch[1])) : '';
+
                     return (
                       <div key={pick.display_name} className="px-4 py-3 flex items-center justify-between">
                         <div>
                           <p className="font-medium text-sm text-white">{pick.display_name}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{pick.picked_team || '—'}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {isTeamPick && pickedFullTeam
+                              ? `${pickedFullTeam} ${spreadText}${opponent ? ` vs ${opponent}` : ''}`
+                              : hasGame
+                                ? `${pick.picked_team} · ${pick.home_team} vs ${pick.away_team}`
+                                : pick.picked_team || '—'}
+                          </p>
                           {hasGame && pick.home_score !== null && (
                             <p className="text-xs text-gray-600 mt-0.5">
                               Final: {pick.home_team} {pick.home_score}–{pick.away_score} {pick.away_team}
                             </p>
                           )}
-                          <p className={`text-xs mt-0.5 font-mono ${parseFloat(pick.spread_value) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            {formatSpread(pick.spread_value)}
-                          </p>
                         </div>
                         <span className={`text-xs font-bold px-2 py-1 rounded-full ${resultPill(pick.result)}`}>
                           {pick.result.toUpperCase()}

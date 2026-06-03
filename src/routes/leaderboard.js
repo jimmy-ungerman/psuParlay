@@ -170,7 +170,7 @@ router.get('/history', requireAuth, async (req, res) => {
 
       const history = await Promise.all(weekRows.map(async ({ week_number }) => {
         const { rows: picks } = await pool.query(
-          `SELECT hp.display_name, hp.result, hp.spread_value, hp.picked_team,
+          `SELECT hp.display_name, hp.result, hp.spread_value, hp.picked_team, hp.canonical_team,
                   g.home_team, g.away_team, g.home_abbr, g.away_abbr,
                   g.home_score, g.away_score, g.home_spread
            FROM historical_picks hp
