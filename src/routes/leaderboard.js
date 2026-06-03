@@ -31,7 +31,7 @@ router.get('/', requireAuth, async (req, res) => {
         `SELECT display_name,
                 COUNT(*) FILTER (WHERE result = 'win')  as wins,
                 COUNT(*) FILTER (WHERE result = 'loss') as losses,
-                0 as pushes,
+                COUNT(*) FILTER (WHERE result = 'push') as pushes,
                 COUNT(*) as total_picks,
                 SUM(spread_value) as spread_total
          FROM historical_picks
@@ -54,13 +54,14 @@ router.get('/', requireAuth, async (req, res) => {
         if (map[r.display_name]) {
           map[r.display_name].wins += parseInt(r.wins) || 0;
           map[r.display_name].losses += parseInt(r.losses) || 0;
+          map[r.display_name].pushes += parseInt(r.pushes) || 0;
           map[r.display_name].spread_total += parseFloat(r.spread_total) || 0;
         } else {
           map[r.display_name] = {
             display_name: r.display_name,
             wins: parseInt(r.wins) || 0,
             losses: parseInt(r.losses) || 0,
-            pushes: 0,
+            pushes: parseInt(r.pushes) || 0,
             spread_total: parseFloat(r.spread_total) || 0,
           };
         }
@@ -76,7 +77,7 @@ router.get('/', requireAuth, async (req, res) => {
         `SELECT display_name,
                 COUNT(*) FILTER (WHERE result = 'win')  as wins,
                 COUNT(*) FILTER (WHERE result = 'loss') as losses,
-                0 as pushes,
+                COUNT(*) FILTER (WHERE result = 'push') as pushes,
                 0 as pending,
                 SUM(spread_value) as spread_total
          FROM historical_picks
@@ -89,7 +90,7 @@ router.get('/', requireAuth, async (req, res) => {
         ...r,
         wins: parseInt(r.wins) || 0,
         losses: parseInt(r.losses) || 0,
-        pushes: 0,
+        pushes: parseInt(r.pushes) || 0,
         pending: 0,
         spread_total: parseFloat(r.spread_total) || 0,
         streak: null,
