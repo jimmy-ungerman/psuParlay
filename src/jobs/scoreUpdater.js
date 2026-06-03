@@ -10,7 +10,7 @@ export function startScoreUpdater() {
     try { await updateScores(); } catch (err) { console.error('Score update error:', err.message); }
   });
 
-  cron.schedule('0 */6 * * *', async () => {
+  cron.schedule('0 */4 * * *', async () => {
     try {
       if (isMockMode()) {
         await simulateLineMovement();
@@ -67,7 +67,7 @@ async function refreshRealSpreads() {
   const { rows: games } = await pool.query(
     `SELECT * FROM games WHERE status = 'scheduled'`
   );
-  if (games.length === 0) return;
+  if (games.length === 0) return; // no scheduled games, don't burn an API call
 
   const oddsGames = await fetchOddsApiGames();
 
