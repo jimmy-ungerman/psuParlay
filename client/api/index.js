@@ -58,6 +58,9 @@ export const api = {
   getConsensus: (week, season) => request('GET', `/consensus?week=${week}&season=${season}`),
   voteConsensus: (week, season, vote) => request('POST', '/consensus/vote', { week, season, vote }),
 
+  // User management (admin)
+  setLinkAdmin: (userId, enabled) => request('PATCH', `/users/${userId}/link-admin`, { enabled }),
+
   // Parlay link
   getParlayLink: (week, season) => {
     const qs = week && season ? `?week=${week}&season=${season}` : '';

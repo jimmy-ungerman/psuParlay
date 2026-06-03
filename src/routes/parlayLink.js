@@ -32,7 +32,7 @@ router.get('/', requireAuth, async (req, res) => {
 
 // PUT /api/parlay-link
 router.put('/', requireAuth, async (req, res) => {
-  if (!req.user.isAdmin) return res.status(403).json({ error: 'Admin only' });
+  if (!req.user.isAdmin && !req.user.isLinkAdmin) return res.status(403).json({ error: 'Not authorized' });
 
   const { week, season, draftkings_url, fanduel_url } = req.body;
   if (!week || !season) return res.status(400).json({ error: 'week and season required' });
