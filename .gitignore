@@ -4,4 +4,4 @@ data/
 .env
 *.local
 .claude/
-Penn\ State*
+Claude*
