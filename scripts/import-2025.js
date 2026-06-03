@@ -235,17 +235,17 @@ const DATA = [
   ['jimmy', 13, 'loss',  -16.5,  'Georgia Tech -2.5'],
   ['jimmy', 14, 'loss',  -9.5,  'Penn State -13.5'],
 
-  // Ryan Arzenti (unregistered)
-  ['Ryan Arzenti', 1,  'win',  6,     'SC -7'],
-  ['Ryan Arzenti', 2,  'win',  38.5,  'Oregon -27.5'],
-  ['Ryan Arzenti', 3,  'loss', -4.5,  'USC -20.5'],
-  ['Ryan Arzenti', 4,  'win',  0.5,   'Oklahoma -6.5'],
-  ['Ryan Arzenti', 5,  'win',  19.5,  'Iowa St -5.5'],
-  ['Ryan Arzenti', 7,  'win',  33.5,  'Iowa -3.5'],
-  ['Ryan Arzenti', 8,  'win',  5.5,   'Vandy -1.5'],
-  ['Ryan Arzenti', 9,  'win',  0.5,   'Nwestrn +7.5'],
-  ['Ryan Arzenti', 10, 'win',  24,    'Indiana -21'],
-  ['Ryan Arzenti', 11, 'loss', -9.5,  'BYU +12.5'],
+  // R-zenti (unregistered)
+  ['R-zenti', 1,  'win',  6,     'SC -7'],
+  ['R-zenti', 2,  'win',  38.5,  'Oregon -27.5'],
+  ['R-zenti', 3,  'loss', -4.5,  'USC -20.5'],
+  ['R-zenti', 4,  'win',  0.5,   'Oklahoma -6.5'],
+  ['R-zenti', 5,  'win',  19.5,  'Iowa St -5.5'],
+  ['R-zenti', 7,  'win',  33.5,  'Iowa -3.5'],
+  ['R-zenti', 8,  'win',  5.5,   'Vandy -1.5'],
+  ['R-zenti', 9,  'win',  0.5,   'Nwestrn +7.5'],
+  ['R-zenti', 10, 'win',  24,    'Indiana -21'],
+  ['R-zenti', 11, 'loss', -9.5,  'BYU +12.5'],
 
   // Sundy (unregistered)
   ['Sundy', 2,  'loss', -2,    'Lehigh -20'],
@@ -303,16 +303,16 @@ const DATA = [
   ['GMoney2458', 13, 'loss', -4.5,  'USC +10.5'],
   ['GMoney2458', 14, 'loss', -1.5, 'Auburn +5.5'],
 
-  // Mitch Bacco (unregistered)
-  ['Mitch Bacco', 2,  'loss', -20.5, 'K State -17.5'],
-  ['Mitch Bacco', 3,  'loss', -7.5,  'ND -6.5'],
-  ['Mitch Bacco', 5,  'loss', -7.5,  'Kansas -4.5'],
-  ['Mitch Bacco', 6,  'win',  2.5,   'AppState -1.5'],
-  ['Mitch Bacco', 8,  'loss', -1.5,  'AF -4.5'],
-  ['Mitch Bacco', 9,  'loss', -14.5, 'AzST -6.5'],
-  ['Mitch Bacco', 10, 'loss', -0.5,  'Minn -3.5'],
-  ['Mitch Bacco', 11, 'win',  0.5,   'WVU -6.5'],
-  ['Mitch Bacco', 12, 'loss', -30.5, 'SoMiss -3.5'],
+  // Bitch Macco (unregistered)
+  ['Bitch Macco', 2,  'loss', -20.5, 'K State -17.5'],
+  ['Bitch Macco', 3,  'loss', -7.5,  'ND -6.5'],
+  ['Bitch Macco', 5,  'loss', -7.5,  'Kansas -4.5'],
+  ['Bitch Macco', 6,  'win',  2.5,   'AppState -1.5'],
+  ['Bitch Macco', 8,  'loss', -1.5,  'AF -4.5'],
+  ['Bitch Macco', 9,  'loss', -14.5, 'AzST -6.5'],
+  ['Bitch Macco', 10, 'loss', -0.5,  'Minn -3.5'],
+  ['Bitch Macco', 11, 'win',  0.5,   'WVU -6.5'],
+  ['Bitch Macco', 12, 'loss', -30.5, 'SoMiss -3.5'],
 
   // SammyBigBeans (Steve Barker)
   ['SammyBigBeans', 1,  'win',  32.5,  'Iowa St -15.5'],

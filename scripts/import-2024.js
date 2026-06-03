@@ -262,17 +262,17 @@ const DATA = [
   ['jimmy', 13, 'win',  9,     'Illini +2'],
   ['jimmy', 14, 'win',  23,    'Michigan +20'],
 
-  // ── Ryan Arzenti ──────────────────────────────────────────────────────────
+  // ── R-zenti ──────────────────────────────────────────────────────────
   // W2  GT -3:      Syr 31 GT 28.    diff=(28-31)+(-3)=-6
   // W3  WVU -2:     Pitt 38 WVU 34.  diff=(34-38)+(-2)=-6
   // W4  Colorado -1: Colo 38 Baylor 31. diff=(38-31)+(-1)=+6
   // W5  Kansas -2:  Ill 23 Kansas 17. diff=(17-23)+(-2)=-8
   // W12 USC -7:     USC 28 Neb 20.   diff=(28-20)+(-7)=+1
-  ['Ryan Arzenti', 2,  'loss', -6,  'GT -3'],
-  ['Ryan Arzenti', 3,  'loss', -6,  'WVU -2'],
-  ['Ryan Arzenti', 4,  'win',  6,   'Colorado -1'],
-  ['Ryan Arzenti', 5,  'loss', -8,  'Kansas -2'],
-  ['Ryan Arzenti', 12, 'win',  1,   'USC -7'],
+  ['R-zenti', 2,  'loss', -6,  'GT -3'],
+  ['R-zenti', 3,  'loss', -6,  'WVU -2'],
+  ['R-zenti', 4,  'win',  6,   'Colorado -1'],
+  ['R-zenti', 5,  'loss', -8,  'Kansas -2'],
+  ['R-zenti', 12, 'win',  1,   'USC -7'],
 
   // ── Sundy ─────────────────────────────────────────────────────────────────
   // W1  UGA -13.5:  UGA 34 Clem 3.   diff=(34-3)+(-13.5)=+17.5
@@ -358,7 +358,7 @@ const DATA = [
   ['GMoney2458', 13, 'loss', -0.5,  'Under 52.5'],
   ['GMoney2458', 14, 'loss', -5.5,  'TAMU +4.5'],
 
-  // ── Mitch Bacco ───────────────────────────────────────────────────────────
+  // ── Bitch Macco ───────────────────────────────────────────────────────────
   // W1  Troy -8.5:  Troy 26 Nev 28.  diff=(26-28)+(-8.5)=-10.5
   // W2  Maryland -9.5: Md 24 MSU 27. diff=(24-27)+(-9.5)=-12.5
   // W3  SC +6:      SC 33 LSU 36.    diff=(33-36)+6=+3
@@ -371,17 +371,17 @@ const DATA = [
   // W12 WVU: no spread listed — skipped
   // W13 UCONN +10.5: Syr 31 UConn 24. diff=(24-31)+10.5=+3.5
   // W14 BC -3.5:    BC 34 Pitt 23.  diff=(34-23)+(-3.5)=+7.5
-  ['Mitch Bacco', 1,  'loss', -10.5, 'Troy -8.5'],
-  ['Mitch Bacco', 2,  'loss', -12.5, 'Maryland -9.5'],
-  ['Mitch Bacco', 3,  'win',  3,     'SC +6'],
-  ['Mitch Bacco', 4,  'win',  16.5,  'Army -6.5'],
-  ['Mitch Bacco', 5,  'loss', -0.5,  'Louisville +6.5'],
-  ['Mitch Bacco', 7,  'loss', -1.5,  'Over 55.5'],
-  ['Mitch Bacco', 8,  'win',  29.5,  'Florida +1.5'],
-  ['Mitch Bacco', 10, 'win',  29.5,  'Iowa -2.5'],
-  ['Mitch Bacco', 11, 'win',  13.5,  'Duke +3.5'],
-  ['Mitch Bacco', 13, 'win',  3.5,   'UCONN +10.5'],
-  ['Mitch Bacco', 14, 'win',  7.5,   'BC -3.5'],
+  ['Bitch Macco', 1,  'loss', -10.5, 'Troy -8.5'],
+  ['Bitch Macco', 2,  'loss', -12.5, 'Maryland -9.5'],
+  ['Bitch Macco', 3,  'win',  3,     'SC +6'],
+  ['Bitch Macco', 4,  'win',  16.5,  'Army -6.5'],
+  ['Bitch Macco', 5,  'loss', -0.5,  'Louisville +6.5'],
+  ['Bitch Macco', 7,  'loss', -1.5,  'Over 55.5'],
+  ['Bitch Macco', 8,  'win',  29.5,  'Florida +1.5'],
+  ['Bitch Macco', 10, 'win',  29.5,  'Iowa -2.5'],
+  ['Bitch Macco', 11, 'win',  13.5,  'Duke +3.5'],
+  ['Bitch Macco', 13, 'win',  3.5,   'UCONN +10.5'],
+  ['Bitch Macco', 14, 'win',  7.5,   'BC -3.5'],
 
   // ── SammyBigBeans (Steve Barker) ──────────────────────────────────────────
   // W1  Miami (OH) +2.5: NU 13 MiamiOH 6. diff=(6-13)+2.5=-4.5
@@ -609,7 +609,7 @@ const TOTALS_GAME_LINKS = [
   // Grant W13: Under 52.5 — Ohio State vs Indiana (IUOSU)
   { displayName: 'GMoney2458', weekNumber: 13, teams: ['Ohio State', 'Indiana'] },
   // Mitch W7: Over 55.5 — Army vs UAB
-  { displayName: 'Mitch Bacco', weekNumber: 7, teams: ['Army', 'UAB'] },
+  { displayName: 'Bitch Macco', weekNumber: 7, teams: ['Army', 'UAB'] },
 ];
 
 const getPickId = db.prepare('SELECT id FROM historical_picks WHERE season=2024 AND week_number=? AND display_name=?');
