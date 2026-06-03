@@ -23,7 +23,7 @@ router.post('/login', async (req, res) => {
     }
 
     setAuthCookie(res, signToken(user));
-    res.json({ user: { id: user.id, username: user.username, isAdmin: !!user.is_admin } });
+    res.json({ user: { id: user.id, username: user.username, isAdmin: !!user.is_admin, isLinkAdmin: !!user.is_link_admin } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -79,7 +79,7 @@ router.post('/register', async (req, res) => {
     }
 
     setAuthCookie(res, signToken(user));
-    res.status(201).json({ user: { id: user.id, username: user.username, isAdmin: !!user.is_admin } });
+    res.status(201).json({ user: { id: user.id, username: user.username, isAdmin: !!user.is_admin, isLinkAdmin: !!user.is_link_admin } });
   } catch (err) {
     if (err.message?.includes('UNIQUE constraint failed')) return res.status(409).json({ error: 'Username already taken' });
     console.error(err);

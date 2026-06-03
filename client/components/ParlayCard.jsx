@@ -130,7 +130,7 @@ export default function ParlayCard() {
       </div>
 
       {/* Parlay links — admin can set, everyone can open */}
-      {currentUser?.isAdmin ? (
+      {(currentUser?.isAdmin || currentUser?.isLinkAdmin) ? (
         <div className="space-y-2">
           {[
             { label: 'DraftKings', value: dkInput, onChange: setDkInput },

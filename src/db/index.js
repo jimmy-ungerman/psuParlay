@@ -72,6 +72,12 @@ export async function initDb() {
     }
   }
 
+  // Migration: is_link_admin on users
+  const userCols = db.prepare(`PRAGMA table_info(users)`).all();
+  if (!userCols.some(c => c.name === 'is_link_admin')) {
+    db.exec(`ALTER TABLE users ADD COLUMN is_link_admin INTEGER DEFAULT 0`);
+  }
+
   // Migration: consensus_votes table
   const cvTables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='consensus_votes'`).all();
   if (cvTables.length === 0) {

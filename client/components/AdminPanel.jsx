@@ -3,6 +3,7 @@ import { api } from '../api/index.js';
 
 export default function AdminPanel() {
   const [invites, setInvites] = useState([]);
+  const [users, setUsers] = useState([]);
   const [label, setLabel] = useState('');
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -13,11 +14,18 @@ export default function AdminPanel() {
   async function load() {
     setLoading(true);
     try {
-      const res = await api.getInvites();
-      setInvites(res.invites || []);
+      const [inviteRes, userRes] = await Promise.all([api.getInvites(), api.getUsers()]);
+      setInvites(inviteRes.invites || []);
+      setUsers(userRes.users || []);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function toggleLinkAdmin(user) {
+    const enabled = !user.is_link_admin;
+    await api.setLinkAdmin(user.id, enabled);
+    setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_link_admin: enabled ? 1 : 0 } : u));
   }
 
   useEffect(() => { load(); }, []);
@@ -51,6 +59,32 @@ export default function AdminPanel() {
 
   return (
     <div className="p-4 space-y-6">
+      {/* User roles */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">User Roles</h2>
+        {loading ? (
+          <p className="text-gray-500 text-sm">Loading...</p>
+        ) : (
+          <div className="space-y-2">
+            {users.filter(u => !u.is_admin).map(u => (
+              <div key={u.id} className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 flex items-center justify-between">
+                <span className="text-sm text-white">{u.username}</span>
+                <button
+                  onClick={() => toggleLinkAdmin(u)}
+                  className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                    u.is_link_admin
+                      ? 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30'
+                      : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                  }`}
+                >
+                  {u.is_link_admin ? 'Link Admin ✓' : 'Link Admin'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div>
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Generate Invite</h2>
         <form onSubmit={createInvite} className="flex gap-2">
