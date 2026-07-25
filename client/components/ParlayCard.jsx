@@ -65,6 +65,7 @@ export default function ParlayCard() {
   const [dkInput, setDkInput] = useState('');
   const [fdInput, setFdInput] = useState('');
   const [linkSaving, setLinkSaving] = useState(false);
+  const [editingLinks, setEditingLinks] = useState(false);
 
   const loadReactions = useCallback(async (w, s) => {
     if (!w || !s) return;
@@ -129,8 +130,8 @@ export default function ParlayCard() {
         <span className="text-xs text-gray-600">{allLegs.length} {allLegs.length === 1 ? 'leg' : 'legs'}</span>
       </div>
 
-      {/* Parlay links — admin can set, everyone can open */}
-      {(currentUser?.isAdmin || currentUser?.isLinkAdmin) ? (
+      {/* Parlay links — always show buttons; admins can edit */}
+      {editingLinks ? (
         <div className="space-y-2">
           {[
             { label: 'DraftKings', value: dkInput, onChange: setDkInput },
@@ -147,47 +148,63 @@ export default function ParlayCard() {
               />
             </div>
           ))}
-          <button
-            disabled={linkSaving}
-            onClick={async () => {
-              setLinkSaving(true);
-              try {
-                const normalize = u => u ? (u.startsWith('http') ? u : `https://${u}`) : null;
-                const res = await api.setParlayLink(week, season, normalize(dkInput.trim()), normalize(fdInput.trim()));
-                setParlayLinks(res);
-              } finally {
-                setLinkSaving(false);
-              }
-            }}
-            className="w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg"
-          >
-            {linkSaving ? 'Saving...' : 'Save Links'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              disabled={linkSaving}
+              onClick={async () => {
+                setLinkSaving(true);
+                try {
+                  const normalize = u => u ? (u.startsWith('http') ? u : `https://${u}`) : null;
+                  const res = await api.setParlayLink(week, season, normalize(dkInput.trim()), normalize(fdInput.trim()));
+                  setParlayLinks(res);
+                  setEditingLinks(false);
+                } finally {
+                  setLinkSaving(false);
+                }
+              }}
+              className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg"
+            >
+              {linkSaving ? 'Saving...' : 'Save Links'}
+            </button>
+            <button
+              onClick={() => {
+                setDkInput(parlayLinks.draftkings_url || '');
+                setFdInput(parlayLinks.fanduel_url || '');
+                setEditingLinks(false);
+              }}
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium rounded-lg"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
-      ) : (parlayLinks.draftkings_url || parlayLinks.fanduel_url) ? (
+      ) : (
         <div className="flex gap-2">
-          {parlayLinks.draftkings_url && (
-            <a
-              href={parlayLinks.draftkings_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-400 font-medium text-sm rounded-xl px-4 py-3"
-            >
-              🎰 DraftKings
+          {[
+            { label: 'DraftKings', url: parlayLinks.draftkings_url, activeClass: 'bg-green-600/20 hover:bg-green-600/30 border-green-500/30 text-green-400' },
+            { label: 'FanDuel',    url: parlayLinks.fanduel_url,    activeClass: 'bg-blue-600/20 hover:bg-blue-600/30 border-blue-500/30 text-blue-400' },
+          ].map(({ label, url, activeClass }) => url ? (
+            <a key={label} href={url} target="_blank" rel="noopener noreferrer"
+              className={`flex-1 flex items-center justify-center gap-1.5 border font-medium text-sm rounded-xl px-4 py-3 ${activeClass}`}>
+              🎰 {label}
             </a>
-          )}
-          {parlayLinks.fanduel_url && (
-            <a
-              href={parlayLinks.fanduel_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 font-medium text-sm rounded-xl px-4 py-3"
+          ) : (
+            <span key={label}
+              className="flex-1 flex items-center justify-center gap-1.5 border border-gray-700 text-gray-600 font-medium text-sm rounded-xl px-4 py-3 select-none">
+              🎰 {label}
+            </span>
+          ))}
+          {(currentUser?.isAdmin || currentUser?.isLinkAdmin) && (
+            <button
+              onClick={() => setEditingLinks(true)}
+              title="Edit links"
+              className="px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 hover:text-gray-200 text-sm rounded-xl"
             >
-              🎰 FanDuel
-            </a>
+              ✏️
+            </button>
           )}
         </div>
-      ) : null}
+      )}
 
       {picks.length === 0 && !consensus ? (
         <div className="text-center py-12 text-gray-600">
