@@ -45,7 +45,7 @@ app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 // Serve the built frontend
 const distDir = join(__dirname, '../dist');
 app.use(express.static(distDir));
-app.get('*', (_, res) => res.sendFile(join(distDir, 'index.html')));
+app.get('/{*path}', (_, res) => res.sendFile(join(distDir, 'index.html')));
 
 async function start() {
   try {
