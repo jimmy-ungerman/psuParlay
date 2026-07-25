@@ -1,4 +1,4 @@
-import cron from 'node-cron';
+import { schedule } from 'node-cron';
 import pool from '../db/index.js';
 import { fetchLiveScores } from '../services/espn.js';
 import { calculateResult } from '../services/results.js';
@@ -6,11 +6,11 @@ import { fetchOddsApiGames, fluctuateSpread, isMockMode, teamsMatch } from '../s
 // Every 15 min: update scores and resolve picks
 // Every 6 hours: refresh spreads from The Odds API (or simulate movement in mock mode)
 export function startScoreUpdater() {
-  cron.schedule('*/15 * * * *', async () => {
+  schedule('*/15 * * * *', async () => {
     try { await updateScores(); } catch (err) { console.error('Score update error:', err.message); }
   });
 
-  cron.schedule('0 */4 * * *', async () => {
+  schedule('0 */4 * * *', async () => {
     try {
       if (isMockMode()) {
         await simulateLineMovement();
