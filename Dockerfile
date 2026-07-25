@@ -3,7 +3,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json .
 RUN npm install
-COPY vite.config.js postcss.config.js ./
+COPY index.html vite.config.js postcss.config.js ./
 COPY client ./client
 COPY public ./public
 RUN npm run build
