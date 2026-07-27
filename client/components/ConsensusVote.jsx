@@ -23,6 +23,8 @@ export default function ConsensusVote() {
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
   const [error, setError] = useState('');
+  const [pickCleared, setPickCleared] = useState(false);
+  const [consensusDropped, setConsensusDropped] = useState(false);
 
   useEffect(() => {
     api.getGames().then(res => {
@@ -53,7 +55,15 @@ export default function ConsensusVote() {
     setVoting(true);
     setError('');
     try {
-      await api.voteConsensus(week, season, vote);
+      const res = await api.voteConsensus(week, season, vote);
+      if (res.clearedPickUserIds?.includes(user.id)) {
+        setPickCleared(true);
+        setConsensusDropped(false);
+      }
+      if (res.consensusDropped) {
+        setConsensusDropped(true);
+        setPickCleared(false);
+      }
       await load();
     } catch (err) {
       setError(err.message);
@@ -176,6 +186,16 @@ export default function ConsensusVote() {
           )}
           {gameLocked && (
             <p className="text-xs text-center text-gray-600 pt-1">Voting locked — game has started</p>
+          )}
+          {pickCleared && (
+            <p className="text-xs text-yellow-400 bg-yellow-500/10 rounded-lg px-3 py-2 text-center">
+              Your weekly pick was on the PSU game and has been cleared — please choose a new game.
+            </p>
+          )}
+          {consensusDropped && (
+            <p className="text-xs text-blue-400 bg-blue-500/10 rounded-lg px-3 py-2 text-center">
+              Consensus dropped below 50% — PSU pick is available again.
+            </p>
           )}
           {error && <p className="text-xs text-red-400 text-center">{error}</p>}
         </div>
