@@ -56,9 +56,12 @@ router.get('/', requireAuth, async (req, res) => {
 
 // POST /api/picks
 router.post('/', requireAuth, async (req, res) => {
-  const { gameId, pickedTeam } = req.body;
+  const { gameId, pickedTeam, note } = req.body;
   if (!gameId || !['home', 'away', 'over', 'under'].includes(pickedTeam)) {
     return res.status(400).json({ error: 'gameId and pickedTeam (home|away|over|under) required' });
+  }
+  if (note && note.length > 100) {
+    return res.status(400).json({ error: 'Note must be 100 characters or less' });
   }
 
   try {
@@ -97,15 +100,44 @@ router.post('/', requireAuth, async (req, res) => {
       : spreadForTeam(pickedTeam, parseFloat(game.home_spread));
 
     const { rows: pick } = await pool.query(
-      `INSERT INTO picks (user_id, game_id, week_number, season, picked_team, spread_at_pick)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO picks (user_id, game_id, week_number, season, picked_team, spread_at_pick, note)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (user_id, week_number, season)
-       DO UPDATE SET game_id = $2, picked_team = $5, spread_at_pick = $6, result = 'pending', created_at = CURRENT_TIMESTAMP
+       DO UPDATE SET game_id = $2, picked_team = $5, spread_at_pick = $6, note = $7, result = 'pending', created_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [req.user.userId, gameId, game.week_number, game.season, pickedTeam, spreadAtPick]
+      [req.user.userId, gameId, game.week_number, game.season, pickedTeam, spreadAtPick, note?.trim() || null]
     );
 
     res.status(201).json({ pick: pick[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PATCH /api/picks/note — update trash talk note on current pick (before deadline only)
+router.patch('/note', requireAuth, async (req, res) => {
+  const { note } = req.body;
+  if (note && note.length > 100) {
+    return res.status(400).json({ error: 'Note must be 100 characters or less' });
+  }
+  try {
+    const { rows } = await pool.query(
+      `SELECT p.id, g.commence_time FROM picks p
+       JOIN games g ON g.id = p.game_id
+       WHERE p.user_id = $1 AND p.result = 'pending'
+       ORDER BY p.created_at DESC LIMIT 1`,
+      [req.user.userId]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'No active pick found' });
+
+    const pick = rows[0];
+    if (new Date() >= getPickDeadline(pick.commence_time)) {
+      return res.status(400).json({ error: 'Pick deadline has passed' });
+    }
+
+    await pool.query('UPDATE picks SET note = $1 WHERE id = $2', [note?.trim() || null, pick.id]);
+    res.json({ message: 'Note updated' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
