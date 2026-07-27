@@ -25,6 +25,7 @@ export default function WeekPicker() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [consensusReached, setConsensusReached] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -46,6 +47,11 @@ export default function WeekPicker() {
         if (p.user_id !== user?.id) claimed[p.game_id] = p.display_name;
       }
       setClaimedGames(claimed);
+
+      if (gamesRes.week && gamesRes.season) {
+        const consensusRes = await api.getConsensus(gamesRes.week, gamesRes.season).catch(() => null);
+        setConsensusReached(consensusRes?.consensusReached || false);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -233,6 +239,11 @@ export default function WeekPicker() {
         </div>
       )}
 
+      {consensusReached && !myPick && (
+        <p className="text-yellow-400 text-sm bg-yellow-500/10 rounded-lg px-3 py-2">
+          Penn State consensus was reached — your pick was cleared. Please choose a new game.
+        </p>
+      )}
       {error && <p className="text-red-400 text-sm bg-red-400/10 rounded-lg px-3 py-2">{error}</p>}
       {success && <p className="text-green-400 text-sm bg-green-400/10 rounded-lg px-3 py-2">{success}</p>}
 
