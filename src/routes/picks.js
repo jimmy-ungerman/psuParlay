@@ -112,4 +112,29 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
+// DELETE /api/picks — clear the current user's pick for this week (before deadline only)
+router.delete('/', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT p.id, g.commence_time FROM picks p
+       JOIN games g ON g.id = p.game_id
+       WHERE p.user_id = $1 AND p.result = 'pending'
+       ORDER BY p.created_at DESC LIMIT 1`,
+      [req.user.userId]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'No active pick to clear' });
+
+    const pick = rows[0];
+    if (new Date() >= getPickDeadline(pick.commence_time)) {
+      return res.status(400).json({ error: 'Pick deadline has passed — picks lock at 11:30 AM ET Saturday' });
+    }
+
+    await pool.query('DELETE FROM picks WHERE id = $1', [pick.id]);
+    res.json({ message: 'Pick cleared' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 export default router;

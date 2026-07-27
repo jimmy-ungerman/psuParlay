@@ -34,6 +34,7 @@ export const api = {
     return request('GET', `/picks${qs}`);
   },
   submitPick: (gameId, pickedTeam) => request('POST', '/picks', { gameId, pickedTeam }),
+  clearPick: () => request('DELETE', '/picks'),
 
   // Leaderboard
   getLeaderboard: (season) => request('GET', `/leaderboard${season ? `?season=${season}` : ''}`),

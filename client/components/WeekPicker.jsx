@@ -55,6 +55,22 @@ export default function WeekPicker() {
 
   useEffect(() => { load(); }, []);
 
+  async function handleClearPick() {
+    if (submitting) return;
+    setSubmitting(true);
+    setError('');
+    setSuccess('');
+    try {
+      await api.clearPick();
+      setSuccess('Pick cleared.');
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handlePick(gameId, pickedTeam) {
     if (submitting) return;
     setSubmitting(true);
@@ -242,7 +258,18 @@ export default function WeekPicker() {
               </p>
             </>
           )}
-          <p className="text-xs text-gray-500 mt-0.5">Locked before kickoff — you can change until then</p>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-xs text-gray-500">Locked before kickoff — you can change until then</p>
+            {!isLocked() && (
+              <button
+                onClick={handleClearPick}
+                disabled={submitting}
+                className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50 transition-colors"
+              >
+                Clear pick
+              </button>
+            )}
+          </div>
         </div>
       )}
 
