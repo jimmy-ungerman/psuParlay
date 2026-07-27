@@ -70,7 +70,10 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Pick deadline has passed — picks lock at 11:30 AM ET Saturday' });
     }
 
-    if (new Date(game.commence_time).getDay() !== 6) {
+    // Check day in ET (UTC-4 during football season) — late western-timezone games
+    // (e.g. 7:30 PM MST) are stored as UTC Sunday but are still Saturday games.
+    const etDay = new Date(new Date(game.commence_time).getTime() - 4 * 60 * 60 * 1000).getUTCDay();
+    if (etDay !== 6) {
       return res.status(400).json({ error: 'Only Saturday games are eligible for picks' });
     }
 
