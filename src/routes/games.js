@@ -113,9 +113,12 @@ async function seedWithRealOdds(events, week, season) {
     const oddsGame = oddsGames.find(
       o => teamsMatch(o.homeTeam, event.homeTeam) && teamsMatch(o.awayTeam, event.awayTeam)
     );
-    const spread = oddsGame?.homeSpread ?? generateMockSpread();
-    const total = oddsGame?.total ?? generateMockTotal();
-    if (!oddsGame) console.warn(`No odds match for ${event.homeTeam} vs ${event.awayTeam}, using mock spread`);
+    if (!oddsGame) {
+      console.log(`No odds yet for ${event.homeTeam} vs ${event.awayTeam}, skipping until lines are posted`);
+      continue;
+    }
+    const spread = oddsGame.homeSpread;
+    const total = oddsGame.total ?? null;
 
     const { rows: inserted } = await pool.query(
       `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, total, commence_time, week_number, season, status, conference)
