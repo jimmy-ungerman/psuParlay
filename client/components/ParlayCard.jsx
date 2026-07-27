@@ -329,6 +329,9 @@ export default function ParlayCard() {
                     <span>Picked at {formatSpread(pick.spread_at_pick)}</span>
                     <LineMovement movement={pick.line_movement} />
                   </div>
+                  {pick.note && (
+                    <p className="text-xs text-gray-400 italic mt-1">"{pick.note}"</p>
+                  )}
 
                   {(isGameLive || isComplete) && (
                     <div className={`mt-2 text-xs font-medium ${isGameLive ? 'text-yellow-400' : 'text-gray-400'}`}>

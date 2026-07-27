@@ -33,7 +33,8 @@ export const api = {
     const qs = week && season ? `?week=${week}&season=${season}` : '';
     return request('GET', `/picks${qs}`);
   },
-  submitPick: (gameId, pickedTeam) => request('POST', '/picks', { gameId, pickedTeam }),
+  submitPick: (gameId, pickedTeam, note) => request('POST', '/picks', { gameId, pickedTeam, note }),
+  updatePickNote: (note) => request('PATCH', '/picks/note', { note }),
   clearPick: () => request('DELETE', '/picks'),
 
   // Leaderboard

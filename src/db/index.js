@@ -41,6 +41,12 @@ export async function initDb() {
     db.exec(`ALTER TABLE games ADD COLUMN total REAL`);
   }
 
+  // Migration: pick trash talk note
+  const pickCols = db.prepare(`PRAGMA table_info(picks)`).all();
+  if (!pickCols.some(c => c.name === 'note')) {
+    db.exec(`ALTER TABLE picks ADD COLUMN note TEXT`);
+  }
+
   // Remove true week 0 games (before Aug 25 — week 1 can start as early as Aug 28)
   db.exec(`DELETE FROM picks WHERE game_id IN (SELECT id FROM games WHERE strftime('%m-%d', commence_time) < '08-25')`);
   db.exec(`DELETE FROM games WHERE strftime('%m-%d', commence_time) < '08-25'`);

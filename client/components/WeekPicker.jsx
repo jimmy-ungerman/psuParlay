@@ -26,6 +26,8 @@ export default function WeekPicker() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [consensusReached, setConsensusReached] = useState(false);
+  const [note, setNote] = useState('');
+  const [noteSaving, setNoteSaving] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -40,6 +42,7 @@ export default function WeekPicker() {
 
       const mine = (picksRes.picks || []).find(p => p.user_id === user?.id);
       setMyPick(mine || null);
+      setNote(mine?.note || '');
 
       // Build a map of gameId -> username for games claimed by others
       const claimed = {};
@@ -60,6 +63,19 @@ export default function WeekPicker() {
   }
 
   useEffect(() => { load(); }, []);
+
+  async function handleSaveNote() {
+    if (noteSaving) return;
+    setNoteSaving(true);
+    try {
+      await api.updatePickNote(note);
+      setMyPick(p => ({ ...p, note: note.trim() || null }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setNoteSaving(false);
+    }
+  }
 
   async function handleClearPick() {
     if (submitting) return;
@@ -269,6 +285,31 @@ export default function WeekPicker() {
               </p>
             </>
           )}
+          {!isLocked() ? (
+            <div className="mt-3">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={note}
+                  onChange={e => setNote(e.target.value.slice(0, 100))}
+                  onBlur={handleSaveNote}
+                  placeholder="Add a trash talk line... (optional)"
+                  className="flex-1 bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                />
+                <button
+                  onClick={handleSaveNote}
+                  disabled={noteSaving || note === (myPick.note || '')}
+                  className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-40 transition-colors px-1"
+                >
+                  {noteSaving ? '...' : 'Save'}
+                </button>
+              </div>
+              <p className="text-right text-xs text-gray-700 mt-0.5">{note.length}/100</p>
+            </div>
+          ) : myPick.note ? (
+            <p className="text-xs text-gray-400 italic mt-2">"{myPick.note}"</p>
+          ) : null}
+
           <div className="flex items-center justify-between mt-2">
             <p className="text-xs text-gray-500">Locked before kickoff — you can change until then</p>
             {!isLocked() && (
