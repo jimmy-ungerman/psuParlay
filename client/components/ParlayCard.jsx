@@ -57,6 +57,7 @@ export default function ParlayCard() {
   const [reactions, setReactions] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [parlayRecord, setParlayRecord] = useState(null);
+  const [streaks, setStreaks] = useState({});
   const [week, setWeek] = useState(null);
   const [season, setSeason] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -79,16 +80,22 @@ export default function ParlayCard() {
     async function load() {
       setLoading(true);
       try {
-        const [res, usersRes, recordRes] = await Promise.all([
+        const [res, usersRes, recordRes, leaderboardRes] = await Promise.all([
           api.getPicks(),
           api.getUsers(),
           api.getParlayRecord(),
+          api.getLeaderboard(),
         ]);
         setPicks(res.picks || []);
         setWeek(res.week);
         setSeason(res.season);
         setAllUsers(usersRes.users || []);
         setParlayRecord(recordRes.allTime || null);
+        const streakMap = {};
+        for (const entry of leaderboardRes.leaderboard || []) {
+          if (entry.id && entry.streak) streakMap[entry.id] = entry.streak;
+        }
+        setStreaks(streakMap);
         await loadReactions(res.week, res.season);
         const linkRes = await api.getParlayLink(res.week, res.season);
         setParlayLinks(linkRes);
@@ -296,7 +303,19 @@ export default function ParlayCard() {
               return (
                 <div key={pick.id} className="bg-gray-900 rounded-xl border border-gray-800 p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-white text-sm">{pick.display_name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-white text-sm">{pick.display_name}</span>
+                      {streaks[pick.user_id] && (() => {
+                        const { type, count } = streaks[pick.user_id];
+                        return (
+                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                            type === 'win' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            {type === 'win' ? 'W' : 'L'}{count}
+                          </span>
+                        );
+                      })()}
+                    </div>
                     {resultBadge(pick.result)}
                   </div>
 
