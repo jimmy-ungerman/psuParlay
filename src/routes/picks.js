@@ -26,8 +26,7 @@ router.get('/', requireAuth, async (req, res) => {
          g.home_spread as current_home_spread,
          g.total as current_total,
          g.commence_time, g.status as game_status,
-         g.home_score, g.away_score,
-         (SELECT home_spread FROM odds_snapshots WHERE game_id = g.id ORDER BY recorded_at ASC LIMIT 1) as opening_spread
+         g.home_score, g.away_score
        FROM picks p
        JOIN users u ON p.user_id = u.id
        JOIN games g ON p.game_id = g.id
@@ -41,10 +40,7 @@ router.get('/', requireAuth, async (req, res) => {
       const currentPickedSpread = isTotalPick
         ? parseFloat(p.current_total)
         : spreadForTeam(p.picked_team, parseFloat(p.current_home_spread));
-      const movement = !isNaN(currentPickedSpread)
-        ? parseFloat((currentPickedSpread - parseFloat(p.spread_at_pick)).toFixed(1))
-        : 0;
-      return { ...p, current_picked_spread: currentPickedSpread, line_movement: movement };
+      return { ...p, current_picked_spread: currentPickedSpread };
     });
 
     res.json({ picks: annotated, week: parseInt(week), season: parseInt(season) });

@@ -33,9 +33,7 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const { season, week } = await ensureGamesSeededCached();
     const { rows: games } = await pool.query(
-      `SELECT g.*,
-        (SELECT home_spread FROM odds_snapshots WHERE game_id = g.id ORDER BY recorded_at ASC LIMIT 1) as opening_spread
-       FROM games g
+      `SELECT g.* FROM games g
        WHERE g.week_number = $1 AND g.season = $2
        ORDER BY g.commence_time`,
       [week, season]
@@ -94,9 +92,6 @@ async function seedWithMockSpreads(events, week, season) {
       [event.espnId, event.homeTeam, event.awayTeam, event.homeAbbr, event.awayAbbr,
        spread, total, event.commenceTime, week, season, event.status, event.conference]
     );
-    if (inserted.length > 0) {
-      await pool.query('INSERT INTO odds_snapshots (game_id, home_spread) VALUES ($1, $2)', [inserted[0].id, spread]);
-    }
   }
 }
 
@@ -127,9 +122,6 @@ async function seedWithRealOdds(events, week, season) {
       [event.espnId, event.homeTeam, event.awayTeam, event.homeAbbr, event.awayAbbr,
        spread, total, event.commenceTime, week, season, event.status, event.conference]
     );
-    if (inserted.length > 0) {
-      await pool.query('INSERT INTO odds_snapshots (game_id, home_spread) VALUES ($1, $2)', [inserted[0].id, spread]);
-    }
   }
 }
 
