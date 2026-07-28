@@ -19,15 +19,6 @@ function resultBadge(result) {
   }
 }
 
-function LineMovement({ movement }) {
-  if (movement === 0) return <span className="text-gray-500 text-xs">no movement</span>;
-  const favorable = movement > 0;
-  return (
-    <span className={`text-xs font-medium ${favorable ? 'text-green-400' : 'text-red-400'}`}>
-      {favorable ? '▲' : '▼'} {Math.abs(movement).toFixed(1)}
-    </span>
-  );
-}
 
 function getParlayResult(picks) {
   if (picks.length === 0) return null;
@@ -325,10 +316,6 @@ export default function ParlayCard() {
                     <span className="text-gray-600 text-xs">vs {opponent}</span>
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>Picked at {formatSpread(pick.spread_at_pick)}</span>
-                    <LineMovement movement={pick.line_movement} />
-                  </div>
                   {pick.note && (
                     <p className="text-xs text-gray-400 italic mt-1">"{pick.note}"</p>
                   )}

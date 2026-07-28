@@ -5,6 +5,7 @@ import { calculateResult } from '../services/results.js';
 import { fetchOddsApiGames, fluctuateSpread, isMockMode, teamsMatch } from '../services/odds.js';
 // Every 15 min: update scores and resolve picks
 // Every 6 hours: refresh spreads from The Odds API (or simulate movement in mock mode)
+// Saturday 11:31 AM ET: final spread snapshot after picks close
 export function startScoreUpdater() {
   schedule('*/15 * * * *', async () => {
     try { await updateScores(); } catch (err) { console.error('Score update error:', err.message); }
@@ -20,7 +21,19 @@ export function startScoreUpdater() {
     } catch (err) { console.error('Spread update error:', err.message); }
   });
 
-  console.log('Score updater scheduled (scores: every 15 min, spreads: every 6 hours)');
+  // Final spread update at 11:31 AM ET every Saturday (1 minute after picks close)
+  schedule('31 11 * * 6', async () => {
+    try {
+      console.log('Running final Saturday spread update (11:31 AM ET)');
+      if (isMockMode()) {
+        await simulateLineMovement();
+      } else {
+        await refreshRealSpreads();
+      }
+    } catch (err) { console.error('Final spread update error:', err.message); }
+  }, { timezone: 'America/New_York' });
+
+  console.log('Score updater scheduled (scores: every 15 min, spreads: every 6 hours + Saturday 11:31 AM ET)');
 }
 
 async function updateScores() {
@@ -88,7 +101,6 @@ async function refreshRealSpreads() {
       `UPDATE games SET home_spread = $1, total = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`,
       [newSpread, newTotal, game.id]
     );
-    await pool.query(`INSERT INTO odds_snapshots (game_id, home_spread) VALUES ($1, $2)`, [game.id, newSpread]);
     console.log(`Odds updated: ${game.home_team} vs ${game.away_team}: spread ${game.home_spread} → ${newSpread}, total ${game.total} → ${newTotal}`);
   }
 }
@@ -102,6 +114,5 @@ async function simulateLineMovement() {
     if (Math.random() > 0.2) continue;
     const newSpread = fluctuateSpread(parseFloat(game.home_spread));
     await pool.query(`UPDATE games SET home_spread = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [newSpread, game.id]);
-    await pool.query(`INSERT INTO odds_snapshots (game_id, home_spread) VALUES ($1, $2)`, [game.id, newSpread]);
   }
 }
