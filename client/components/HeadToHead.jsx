@@ -17,12 +17,12 @@ export default function HeadToHead({ userId, onClose }) {
   }, [userId]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-sink/70" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy-sink/70 lg:items-center lg:p-6" onClick={onClose}>
       <div
-        className="w-full max-w-[30rem] bg-navy-raised rounded-t-2xl border-t border-line p-5 pb-8"
+        className="w-full max-w-[30rem] bg-navy-raised rounded-t-2xl border-t border-line p-5 pb-8 lg:rounded-2xl lg:border lg:max-w-md lg:pb-6"
         onClick={e => e.stopPropagation()}
       >
-        <div className="w-10 h-1 bg-line rounded-full mx-auto mb-4" />
+        <div className="w-10 h-1 bg-line rounded-full mx-auto mb-4 lg:hidden" />
 
         {loading && <p className="text-center text-chalk-faint py-6">Loading…</p>}
 

@@ -169,6 +169,89 @@
     color: var(--color-bust);
   }
 
+  /* ---- laptop layout: left rail + comfortable content column ---------
+     Phones keep the flex column (sticky header / sticky bottom tab bar).
+     From 60rem up, the same three elements re-flow into a CSS grid: the
+     header and tab bar stack in a fixed-width left rail, the content fills
+     the rest. No markup change — just where the boxes land. */
+  @media (min-width: 60rem) {
+    .app-shell {
+      display: grid;
+      grid-template-columns: 13.5rem minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+      grid-template-areas:
+        "rail-top content"
+        "rail-nav content";
+      max-width: 74rem;
+      min-height: 100dvh;
+      height: 100dvh;
+    }
+
+    .app-header {
+      grid-area: rail-top;
+      position: static;
+      z-index: auto;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.35rem;
+      padding: 1.15rem 1.1rem 1rem;
+      background: var(--color-navy-sink);
+      backdrop-filter: none;
+      border-right: 1px solid var(--color-line);
+      border-bottom: 1px solid var(--color-line-soft);
+    }
+    .app-header .wordmark {
+      font-size: 1.15rem;
+    }
+
+    .tabbar {
+      grid-area: rail-nav;
+      position: static;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.1rem;
+      padding: 0.75rem 0.55rem;
+      background: var(--color-navy-sink);
+      border-top: 0;
+      border-right: 1px solid var(--color-line);
+    }
+    .tabbar button {
+      flex: none;
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: 0.6rem;
+      padding: 0.6rem 0.7rem;
+      border-radius: 7px;
+      font-size: 0.72rem;
+    }
+    .tabbar button::before {
+      width: 3px;
+      height: 0.95rem;
+      flex-shrink: 0;
+    }
+    .tabbar button:hover {
+      color: var(--color-chalk-dim);
+      background: color-mix(in srgb, var(--color-chalk) 5%, transparent);
+    }
+    .tabbar button.is-active {
+      background: color-mix(in srgb, var(--color-cash) 12%, transparent);
+    }
+    .tabbar .tag {
+      margin-left: auto;
+    }
+
+    main {
+      grid-area: content;
+      min-width: 0;
+      overflow-y: auto;
+      padding: 1.25rem clamp(1rem, 4vw, 3rem) 4rem;
+    }
+    main > div {
+      max-width: 44rem;
+      margin: 0 auto;
+    }
+  }
+
   /* ---- primitives ---------------------------------------------------- */
   .card {
     background: var(--color-navy-raised);
