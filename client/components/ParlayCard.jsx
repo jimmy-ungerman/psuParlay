@@ -32,55 +32,54 @@ function getConsensusResult(game, psuSpread) {
   return 'push';
 }
 
-// One printed line on the slip.
-function Leg({ who, bet, tag, result, gameStatus, score, killed }) {
+// One printed line on the slip: name + line up top, and the matchup underneath —
+// the opponent and kickoff before the game, the score once it's on.
+function Leg({ who, bet, result, gameStatus, detail, killed }) {
   const live = result === 'pending' && gameStatus === 'in_progress';
-  const soon = result === 'pending' && gameStatus !== 'in_progress' && gameStatus !== 'complete';
 
-  let mark;
-  if (killed) {
-    mark = <span className="stamp-mini">Busted</span>;
-  } else if (result === 'win') {
-    mark = <span className="mark w">W</span>;
-  } else if (result === 'loss') {
-    mark = <span className="mark l">L</span>;
-  } else if (result === 'push') {
-    mark = <span className="mark">P</span>;
-  } else if (live) {
-    mark = <span className="mark live"><span className="dot pulse-dot" />Live</span>;
-  } else if (soon) {
-    mark = <span className="mark soon">{score?.kickoff || '—'}</span>;
-  } else {
-    mark = <span className="mark soon">—</span>;
-  }
+  let mark = null;
+  if (killed) mark = <span className="stamp-mini">Busted</span>;
+  else if (result === 'win') mark = <span className="mark w">W</span>;
+  else if (result === 'loss') mark = <span className="mark l">L</span>;
+  else if (result === 'push') mark = <span className="mark">P</span>;
+  else if (live) mark = <span className="mark live"><span className="dot pulse-dot" />Live</span>;
 
   return (
     <div className={`leg${killed ? ' killed' : ''}`}>
       <span className="lede">
         <span className="who">{who}</span>
         <span className="bet">{bet}</span>
-        {tag && <span className="bet">· {tag}</span>}
       </span>
       {mark}
-      {score?.line && <span className="score">{score.line}</span>}
+      {detail && <span className="score">{detail}</span>}
     </div>
   );
 }
 
-function scoreLine(pick, isTotal) {
-  const status = pick.game_status;
-  if (status === 'complete' && pick.home_score !== null) {
-    const total = isTotal ? ` — ${pick.home_score + pick.away_score} pts` : '';
-    return { line: <>Final · <b>{pick.home_abbr} {pick.home_score}</b>–{pick.away_score} {pick.away_abbr}{total}</> };
+// pickedSide: 'home' | 'away' | null (null / totals show the raw matchup)
+function legDetail(g, pickedSide, isTotal) {
+  if (!g) return null;
+  const { home_team, away_team, home_abbr, away_abbr, home_score, away_score, status, commence_time } = g;
+
+  let matchup;
+  if (isTotal || !pickedSide) {
+    matchup = `${away_team} @ ${home_team}`;
+  } else {
+    const opp = pickedSide === 'home' ? away_team : home_team;
+    matchup = `${pickedSide === 'home' ? 'vs' : '@'} ${opp}`;
   }
-  if (status === 'in_progress' && pick.home_score !== null) {
-    return { line: <><b>{pick.home_abbr} {pick.home_score}</b> · {pick.away_abbr} {pick.away_score} · <span className="q">Live</span></> };
+
+  if (status === 'complete' && home_score !== null) {
+    const pts = isTotal ? ` · ${home_score + away_score} pts` : '';
+    return <>{matchup} · Final <b>{away_abbr} {away_score}–{home_score} {home_abbr}</b>{pts}</>;
   }
-  if (status !== 'complete' && status !== 'in_progress' && pick.commence_time) {
-    const d = new Date(pick.commence_time);
-    return { kickoff: d.toLocaleDateString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) };
+  if (status === 'in_progress' && home_score !== null) {
+    return <>{matchup} · <span className="q">Live</span> <b>{away_abbr} {away_score}–{home_score} {home_abbr}</b></>;
   }
-  return {};
+  const when = commence_time
+    ? new Date(commence_time).toLocaleDateString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })
+    : null;
+  return <>{matchup}{when ? ` · ${when}` : ''}</>;
 }
 
 export default function ParlayCard() {
@@ -227,22 +226,14 @@ export default function ParlayCard() {
               if (leg._consensus) {
                 const g = leg.game;
                 const psuIsHome = g?.home_team?.includes('Penn State');
-                const opp = g ? (psuIsHome ? g.away_team : g.home_team) : null;
-                let score = {};
-                if (g?.status === 'complete' && g.home_score !== null) {
-                  score = { line: <>Final · <b>{g.home_abbr} {g.home_score}</b>–{g.away_score} {g.away_abbr}</> };
-                } else if (g?.status === 'in_progress' && g.home_score !== null) {
-                  score = { line: <><b>{g.home_abbr} {g.home_score}</b> · {g.away_abbr} {g.away_score} · <span className="q">Live</span></> };
-                }
                 return (
                   <Leg
                     key="consensus"
-                    who="Group"
+                    who="Group pick"
                     bet={`Penn State ${formatSpread(leg.psuSpread)}`}
-                    tag={opp ? `vs ${opp}` : 'GROUP'}
                     result={leg.result}
                     gameStatus={g?.status}
-                    score={score}
+                    detail={legDetail(g, psuIsHome ? 'home' : 'away', false)}
                     killed={i === firstLossIndex}
                   />
                 );
@@ -261,7 +252,7 @@ export default function ParlayCard() {
                   bet={bet}
                   result={leg.result}
                   gameStatus={leg.game_status}
-                  score={scoreLine(leg, isTotal)}
+                  detail={legDetail(leg, isTotal ? null : leg.picked_team, isTotal)}
                   killed={i === firstLossIndex}
                 />
               );
