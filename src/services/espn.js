@@ -54,6 +54,14 @@ function parseScoreboard(data) {
   return { season, week, events };
 }
 
+// ESPN's curatedRank tracks the AP Poll all season (verified: doesn't switch to CFP
+// committee rankings once those start in November - checked a week where the two
+// disagreed on team order and curatedRank followed AP). 99 is the "unranked" sentinel.
+function parseRank(competitor) {
+  const rank = competitor?.curatedRank?.current;
+  return rank && rank !== 99 ? rank : null;
+}
+
 export function parseEvent(event) {
   const comp = event.competitions?.[0];
   const home = comp?.competitors?.find(c => c.homeAway === 'home');
@@ -66,6 +74,8 @@ export function parseEvent(event) {
     awayTeam: away?.team?.displayName || 'TBD',
     homeAbbr: home?.team?.abbreviation || '???',
     awayAbbr: away?.team?.abbreviation || '???',
+    homeRank: parseRank(home),
+    awayRank: parseRank(away),
     conference: normalizeConference(comp?.groups?.name),
     commenceTime: event.date,
     status: mapStatus(statusName),
