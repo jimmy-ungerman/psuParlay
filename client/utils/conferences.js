@@ -1,90 +1,199 @@
 // Conference display order
 export const CONF_ORDER = ['SEC', 'Big Ten', 'Big 12', 'ACC', 'Pac-12', 'Mtn West', 'AAC', 'MAC', 'Sun Belt', 'CUSA', 'Ind.', 'Other'];
 
+// Every FBS team, keyed by its exact ESPN displayName (the value stored in
+// games.home_team / games.away_team). Matching is exact — no substring checks —
+// so "Eastern Kentucky Colonels" never lands in the SEC next to "Kentucky
+// Wildcats", and "Southeast Missouri State Redhawks" never gets pulled in with
+// "Missouri Tigers". Alignment reflects the 2026 season.
+//
+// A few teams appear under more than one displayName (ESPN has used both "App
+// State Mountaineers" and "Appalachian State Mountaineers", "San José State" and
+// "San Jose State", etc.) — every spelling we've seen is listed.
 const TEAMS = {
   // SEC
-  'Alabama': 'SEC', 'Auburn': 'SEC', 'Georgia': 'SEC', 'LSU': 'SEC',
-  'Ole Miss': 'SEC', 'Mississippi State': 'SEC', 'Texas A&M': 'SEC',
-  'Arkansas': 'SEC', 'Missouri': 'SEC', 'Tennessee': 'SEC',
-  'South Carolina': 'SEC', 'Vanderbilt': 'SEC', 'Florida': 'SEC',
-  'Kentucky': 'SEC', 'Texas Longhorns': 'SEC', 'Oklahoma Sooners': 'SEC',
+  'Alabama Crimson Tide': 'SEC',
+  'Arkansas Razorbacks': 'SEC',
+  'Auburn Tigers': 'SEC',
+  'Florida Gators': 'SEC',
+  'Georgia Bulldogs': 'SEC',
+  'Kentucky Wildcats': 'SEC',
+  'LSU Tigers': 'SEC',
+  'Mississippi State Bulldogs': 'SEC',
+  'Missouri Tigers': 'SEC',
+  'Oklahoma Sooners': 'SEC',
+  'Ole Miss Rebels': 'SEC',
+  'South Carolina Gamecocks': 'SEC',
+  'Tennessee Volunteers': 'SEC',
+  'Texas Longhorns': 'SEC',
+  'Texas A&M Aggies': 'SEC',
+  'Vanderbilt Commodores': 'SEC',
 
   // Big Ten
-  'Ohio State': 'Big Ten', 'Michigan Wolverines': 'Big Ten', 'Penn State': 'Big Ten',
-  'Michigan State': 'Big Ten', 'Iowa Hawkeyes': 'Big Ten', 'Wisconsin': 'Big Ten',
-  'Minnesota': 'Big Ten', 'Illinois': 'Big Ten', 'Indiana Hoosiers': 'Big Ten',
-  'Purdue': 'Big Ten', 'Rutgers': 'Big Ten', 'Nebraska': 'Big Ten',
-  'Northwestern': 'Big Ten', 'Maryland': 'Big Ten', 'USC Trojans': 'Big Ten',
-  'UCLA Bruins': 'Big Ten', 'Oregon Ducks': 'Big Ten', 'Washington Huskies': 'Big Ten',
+  'Illinois Fighting Illini': 'Big Ten',
+  'Indiana Hoosiers': 'Big Ten',
+  'Iowa Hawkeyes': 'Big Ten',
+  'Maryland Terrapins': 'Big Ten',
+  'Michigan Wolverines': 'Big Ten',
+  'Michigan State Spartans': 'Big Ten',
+  'Minnesota Golden Gophers': 'Big Ten',
+  'Nebraska Cornhuskers': 'Big Ten',
+  'Northwestern Wildcats': 'Big Ten',
+  'Ohio State Buckeyes': 'Big Ten',
+  'Oregon Ducks': 'Big Ten',
+  'Penn State Nittany Lions': 'Big Ten',
+  'Purdue Boilermakers': 'Big Ten',
+  'Rutgers Scarlet Knights': 'Big Ten',
+  'UCLA Bruins': 'Big Ten',
+  'USC Trojans': 'Big Ten',
+  'Washington Huskies': 'Big Ten',
+  'Wisconsin Badgers': 'Big Ten',
 
   // Big 12
-  'Kansas State': 'Big 12', 'Kansas Jayhawks': 'Big 12', 'Oklahoma State': 'Big 12',
-  'TCU': 'Big 12', 'Baylor': 'Big 12', 'West Virginia': 'Big 12',
-  'Iowa State': 'Big 12', 'Texas Tech': 'Big 12', 'Cincinnati Bearcats': 'Big 12',
-  'UCF': 'Big 12', 'Houston Cougars': 'Big 12', 'BYU': 'Big 12',
-  'Arizona Wildcats': 'Big 12', 'Arizona State': 'Big 12', 'Colorado Buffaloes': 'Big 12',
+  'Arizona Wildcats': 'Big 12',
+  'Arizona State Sun Devils': 'Big 12',
+  'Baylor Bears': 'Big 12',
+  'BYU Cougars': 'Big 12',
+  'Cincinnati Bearcats': 'Big 12',
+  'Colorado Buffaloes': 'Big 12',
+  'Houston Cougars': 'Big 12',
+  'Iowa State Cyclones': 'Big 12',
+  'Kansas Jayhawks': 'Big 12',
+  'Kansas State Wildcats': 'Big 12',
+  'Oklahoma State Cowboys': 'Big 12',
+  'TCU Horned Frogs': 'Big 12',
+  'Texas Tech Red Raiders': 'Big 12',
+  'UCF Knights': 'Big 12',
   'Utah Utes': 'Big 12',
+  'West Virginia Mountaineers': 'Big 12',
 
   // ACC
-  'Clemson': 'ACC', 'Florida State': 'ACC', 'Miami Hurricanes': 'ACC',
-  'North Carolina Tar Heels': 'ACC', 'NC State': 'ACC', 'Virginia Tech': 'ACC',
-  'Virginia Cavaliers': 'ACC', 'Duke Blue Devils': 'ACC', 'Wake Forest': 'ACC',
-  'Georgia Tech': 'ACC', 'Pittsburgh': 'ACC', 'Louisville Cardinals': 'ACC',
-  'Boston College': 'ACC', 'Syracuse': 'ACC', 'California Golden Bears': 'ACC',
-  'Stanford': 'ACC', 'SMU Mustangs': 'ACC',
+  'Boston College Eagles': 'ACC',
+  'California Golden Bears': 'ACC',
+  'Clemson Tigers': 'ACC',
+  'Duke Blue Devils': 'ACC',
+  'Florida State Seminoles': 'ACC',
+  'Georgia Tech Yellow Jackets': 'ACC',
+  'Louisville Cardinals': 'ACC',
+  'Miami Hurricanes': 'ACC',
+  'NC State Wolfpack': 'ACC',
+  'North Carolina Tar Heels': 'ACC',
+  'Pittsburgh Panthers': 'ACC',
+  'SMU Mustangs': 'ACC',
+  'Stanford Cardinal': 'ACC',
+  'Syracuse Orange': 'ACC',
+  'Virginia Cavaliers': 'ACC',
+  'Virginia Tech Hokies': 'ACC',
+  'Wake Forest Demon Deacons': 'ACC',
 
   // Pac-12
-  'Oregon State': 'Pac-12', 'Washington State': 'Pac-12', 'Boise State': 'Pac-12',
-  'Colorado State': 'Pac-12', 'Fresno State': 'Pac-12', 'San Diego State': 'Pac-12',
-  'Utah State': 'Pac-12', 'Texas State': 'Pac-12',
+  'Boise State Broncos': 'Pac-12',
+  'Colorado State Rams': 'Pac-12',
+  'Fresno State Bulldogs': 'Pac-12',
+  'Oregon State Beavers': 'Pac-12',
+  'San Diego State Aztecs': 'Pac-12',
+  'Texas State Bobcats': 'Pac-12',
+  'Utah State Aggies': 'Pac-12',
+  'Washington State Cougars': 'Pac-12',
 
   // Mountain West
-  'Nevada Wolf Pack': 'Mtn West', 'UNLV': 'Mtn West', 'Wyoming': 'Mtn West',
-  'Air Force': 'Mtn West', 'New Mexico Lobos': 'Mtn West', 'San José State': 'Mtn West',
-  'San Jose State': 'Mtn West', 'Hawaii': 'Mtn West',
+  'Air Force Falcons': 'Mtn West',
+  "Hawai'i Rainbow Warriors": 'Mtn West',
+  'Hawaii Rainbow Warriors': 'Mtn West',
+  'Nevada Wolf Pack': 'Mtn West',
+  'New Mexico Lobos': 'Mtn West',
+  'Northern Illinois Huskies': 'Mtn West',
+  'San José State Spartans': 'Mtn West',
+  'San Jose State Spartans': 'Mtn West',
+  'UNLV Rebels': 'Mtn West',
+  'UTEP Miners': 'Mtn West',
+  'Wyoming Cowboys': 'Mtn West',
 
   // AAC
-  'Memphis Tigers': 'AAC', 'Navy Midshipmen': 'AAC', 'Tulane': 'AAC',
-  'East Carolina': 'AAC', 'South Florida': 'AAC', 'Rice Owls': 'AAC',
-  'North Texas': 'AAC', 'UTSA': 'AAC', 'Temple': 'AAC',
-  'UAB Blazers': 'AAC', 'Florida Atlantic': 'AAC', 'Charlotte 49ers': 'AAC',
+  'Army Black Knights': 'AAC',
+  'Charlotte 49ers': 'AAC',
+  'East Carolina Pirates': 'AAC',
+  'Florida Atlantic Owls': 'AAC',
+  'Memphis Tigers': 'AAC',
+  'Navy Midshipmen': 'AAC',
+  'North Texas Mean Green': 'AAC',
+  'Rice Owls': 'AAC',
+  'South Florida Bulls': 'AAC',
+  'Temple Owls': 'AAC',
+  'Tulane Green Wave': 'AAC',
   'Tulsa Golden Hurricane': 'AAC',
+  'UAB Blazers': 'AAC',
+  'UTSA Roadrunners': 'AAC',
 
   // MAC
-  'Toledo Rockets': 'MAC', 'Western Michigan': 'MAC', 'Central Michigan': 'MAC',
-  'Ohio Bobcats': 'MAC', 'Ball State': 'MAC', 'Miami (OH)': 'MAC',
-  'Bowling Green': 'MAC', 'Buffalo Bulls': 'MAC', 'Kent State': 'MAC',
-  'Akron': 'MAC', 'Eastern Michigan': 'MAC', 'Northern Illinois': 'MAC',
+  'Akron Zips': 'MAC',
+  'Ball State Cardinals': 'MAC',
+  'Bowling Green Falcons': 'MAC',
+  'Buffalo Bulls': 'MAC',
+  'Central Michigan Chippewas': 'MAC',
+  'Eastern Michigan Eagles': 'MAC',
+  'Kent State Golden Flashes': 'MAC',
+  'Miami (OH) RedHawks': 'MAC',
+  'Massachusetts Minutemen': 'MAC',
+  'UMass Minutemen': 'MAC',
+  'Ohio Bobcats': 'MAC',
+  'Toledo Rockets': 'MAC',
+  'Western Michigan Broncos': 'MAC',
 
   // Sun Belt
-  'Louisiana Ragin': 'Sun Belt', 'Appalachian State': 'Sun Belt',
-  'Georgia Southern': 'Sun Belt', 'South Alabama': 'Sun Belt',
-  'Arkansas State': 'Sun Belt', 'Louisiana Monroe': 'Sun Belt',
+  'App State Mountaineers': 'Sun Belt',
+  'Appalachian State Mountaineers': 'Sun Belt',
+  'Arkansas State Red Wolves': 'Sun Belt',
+  'Coastal Carolina Chanticleers': 'Sun Belt',
+  'Georgia Southern Eagles': 'Sun Belt',
+  'Georgia State Panthers': 'Sun Belt',
+  'James Madison Dukes': 'Sun Belt',
+  "Louisiana Ragin' Cajuns": 'Sun Belt',
+  'UL Monroe Warhawks': 'Sun Belt',
+  'Marshall Thundering Herd': 'Sun Belt',
+  'Old Dominion Monarchs': 'Sun Belt',
+  'South Alabama Jaguars': 'Sun Belt',
+  'Southern Miss Golden Eagles': 'Sun Belt',
   'Troy Trojans': 'Sun Belt',
-  'Georgia State': 'Sun Belt', 'Marshall Thundering': 'Sun Belt',
-  'Southern Miss': 'Sun Belt', 'Old Dominion': 'Sun Belt',
-  'James Madison': 'Sun Belt', 'Coastal Carolina': 'Sun Belt',
 
-  // CUSA
-  'Liberty Flames': 'CUSA', 'Jacksonville State': 'CUSA', 'Sam Houston': 'CUSA',
-  'New Mexico State': 'CUSA', 'FIU': 'CUSA', 'Middle Tennessee': 'CUSA',
-  'Western Kentucky': 'CUSA', 'Louisiana Tech': 'CUSA', 'UTEP': 'CUSA',
-  'Kennesaw State': 'CUSA',
+  // Conference USA
+  'Delaware Blue Hens': 'CUSA',
+  'Florida International Panthers': 'CUSA',
+  'FIU Panthers': 'CUSA',
+  'Jacksonville State Gamecocks': 'CUSA',
+  'Kennesaw State Owls': 'CUSA',
+  'Liberty Flames': 'CUSA',
+  'Louisiana Tech Bulldogs': 'CUSA',
+  'Middle Tennessee Blue Raiders': 'CUSA',
+  'Missouri State Bears': 'CUSA',
+  'New Mexico State Aggies': 'CUSA',
+  'Sam Houston Bearkats': 'CUSA',
+  'Western Kentucky Hilltoppers': 'CUSA',
 
   // Independents
-  'Notre Dame': 'Ind.', 'Army Black Knights': 'Ind.',
+  'Notre Dame Fighting Irish': 'Ind.',
+  'UConn Huskies': 'Ind.',
+  'Connecticut Huskies': 'Ind.',
 };
 
-// Sorted longest-first so more specific names match before shorter ones
-// (e.g. "Florida State" before "Florida", "Georgia Tech" before "Georgia")
-const SORTED_TEAMS = Object.entries(TEAMS).sort((a, b) => b[0].length - a[0].length);
+// Accent/whitespace-insensitive lookup so "San Jose State Spartans" resolves the
+// same as "San José State Spartans" without needing every spelling spelled out.
+function normalizeName(name) {
+  return name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+const NORM_TEAMS = Object.fromEntries(
+  Object.entries(TEAMS).map(([name, conf]) => [normalizeName(name), conf])
+);
 
 export function getConference(teamName) {
   if (!teamName) return 'Other';
-  for (const [key, conf] of SORTED_TEAMS) {
-    if (teamName.includes(key)) return conf;
-  }
-  return 'Other';
+  return TEAMS[teamName] ?? NORM_TEAMS[normalizeName(teamName)] ?? 'Other';
 }
 
 // Common abbreviations and nicknames mapped to team name substrings.
