@@ -5,9 +5,12 @@ import { signToken, setAuthCookie, clearAuthCookie, requireAuth } from '../middl
 
 const router = Router();
 
-// GET /api/auth/me — returns current user from cookie session
+// GET /api/auth/me — returns current user from cookie session.
+// Shape it exactly like /login and /register (id, not the token's userId) so the
+// client sees a consistent user object whether it just logged in or refreshed.
 router.get('/me', requireAuth, (req, res) => {
-  res.json({ user: req.user });
+  const { userId, username, isAdmin, isLinkAdmin } = req.user;
+  res.json({ user: { id: userId, username, isAdmin, isLinkAdmin } });
 });
 
 // POST /api/auth/login
