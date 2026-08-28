@@ -156,7 +156,15 @@ export default function ParlayCard() {
   const consensusLeg = consensus
     ? { _consensus: true, result: consensusResult || 'pending', game: consensus.game, psuSpread: consensus.psuSpread }
     : null;
-  const allLegs = consensusLeg ? [consensusLeg, ...picks] : [...picks];
+
+  // Legs read top to bottom in kickoff order, like a real slip.
+  const legKickoff = (l) => {
+    const t = l._consensus ? l.game?.commence_time : l.commence_time;
+    return t ? new Date(t).getTime() : Infinity;
+  };
+  const allLegs = (consensusLeg ? [consensusLeg, ...picks] : [...picks])
+    .slice()
+    .sort((a, b) => legKickoff(a) - legKickoff(b));
 
   const canEditLinks = currentUser?.isAdmin || currentUser?.isLinkAdmin;
   const pickedUserIds = new Set(picks.map(p => p.user_id));
