@@ -8,13 +8,14 @@ function formatSpread(spread) {
   return n > 0 ? `+${n}` : `${n}`;
 }
 
-function resultPill(result) {
-  switch (result) {
-    case 'win': return 'bg-green-500/20 text-green-400';
-    case 'loss': return 'bg-red-500/20 text-red-400';
-    case 'push': return 'bg-yellow-500/20 text-yellow-400';
-    default: return 'bg-gray-700 text-gray-400';
-  }
+function ResultChip({ result }) {
+  const map = {
+    win: 'up',
+    loss: 'down',
+    push: 'up',
+  };
+  const label = result === 'pending' ? '—' : result.toUpperCase();
+  return <span className={`streak-chip ${map[result] || ''}`}>{label}</span>;
 }
 
 export default function History() {
@@ -51,13 +52,16 @@ export default function History() {
   }, [season]);
 
   return (
-    <div className="p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Past Weeks</h2>
+    <div className="p-4 flex flex-col gap-3">
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="eyebrow mb-1">{season} season</p>
+          <h2 className="dateline text-[2rem]">Past weeks</h2>
+        </div>
         <select
           value={season}
           onChange={e => setSeason(e.target.value)}
-          className="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none"
+          className="field !w-auto !py-1.5 !px-3 text-sm font-mono"
         >
           {seasons.map(s => (
             <option key={s} value={String(s)}>{s}</option>
@@ -66,54 +70,50 @@ export default function History() {
       </div>
 
       {loading ? (
-        <div className="p-6 text-center text-gray-500">Loading history...</div>
+        <div className="p-6 text-center text-chalk-faint">Loading history…</div>
       ) : error ? (
-        <div className="p-6 text-center text-red-400">{error}</div>
+        <div className="p-6 text-center text-bust">{error}</div>
       ) : history.length === 0 ? (
-        <div className="p-6 text-center py-12 text-gray-600">
-          <p className="text-4xl mb-3">📋</p>
-          <p>No completed weeks yet</p>
-        </div>
+        <div className="py-12 text-center text-chalk-faint">No completed weeks yet</div>
       ) : history.map(week => {
         const isOpen = expanded === week.week_number;
         const wins = week.picks.filter(p => p.result === 'win').length;
         const total = week.picks.filter(p => p.result !== 'pending').length;
         const parlayColor = {
-          win: 'text-green-400',
-          loss: 'text-red-400',
-          push: 'text-yellow-400',
-          pending: 'text-gray-500',
+          win: 'text-cash',
+          loss: 'text-bust',
+          push: 'text-favor',
+          pending: 'text-chalk-faint',
         }[week.parlay_result];
 
         return (
-          <div key={week.week_number} className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div key={week.week_number} className="card overflow-hidden">
             <button
               onClick={() => setExpanded(isOpen ? null : week.week_number)}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-800 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-navy-sink transition-colors"
+              aria-expanded={isOpen}
             >
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-white">Week {week.week_number}</span>
-                <span className={`text-xs font-bold ${parlayColor}`}>
-                  {week.parlay_result === 'win' ? 'PARLAY HIT' :
-                   week.parlay_result === 'loss' ? 'PARLAY MISS' :
+                <span className="font-display font-bold text-chalk">Week {week.week_number}</span>
+                <span className={`font-mono text-[0.66rem] tracking-wide font-semibold ${parlayColor}`}>
+                  {week.parlay_result === 'win' ? 'PARLAY CASHED' :
+                   week.parlay_result === 'loss' ? 'PARLAY BUSTED' :
                    week.parlay_result === 'push' ? 'PUSH' : 'PENDING'}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">{wins}/{total} W</span>
-                <span className="text-gray-600">{isOpen ? '▲' : '▼'}</span>
+              <div className="flex items-center gap-2 font-mono text-xs text-chalk-faint">
+                <span>{wins}/{total} W</span>
+                <span>{isOpen ? '▲' : '▼'}</span>
               </div>
             </button>
 
             {isOpen && (
-              <div className="border-t border-gray-800 divide-y divide-gray-800">
+              <div className="border-t border-line-soft divide-y divide-line-soft">
                 {week.is_historical ? (
-                  // Historical picks
                   week.picks.map(pick => {
                     const hasGame = pick.home_team != null;
                     const isTeamPick = pick.canonical_team != null;
 
-                    // Determine full team names from game data
                     let pickedFullTeam = null, opponent = null;
                     if (isTeamPick && hasGame) {
                       const canon = pick.canonical_team.toLowerCase();
@@ -122,15 +122,14 @@ export default function History() {
                       opponent = homeMatch ? pick.away_team : pick.home_team;
                     }
 
-                    // Extract spread from raw pick text (e.g. "Ten -13.5" → -13.5)
                     const spreadMatch = pick.picked_team?.match(/([+-]?\d+\.?\d*)$/);
                     const spreadText = spreadMatch ? formatSpread(parseFloat(spreadMatch[1])) : '';
 
                     return (
-                      <div key={pick.display_name} className="px-4 py-3 flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-sm text-white">{pick.display_name}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">
+                      <div key={pick.display_name} className="px-4 py-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm text-chalk">{pick.display_name}</p>
+                          <p className="text-xs text-chalk-dim mt-0.5 font-mono">
                             {isTeamPick && pickedFullTeam
                               ? `${pickedFullTeam} ${spreadText}${opponent ? ` vs ${opponent}` : ''}`
                               : hasGame
@@ -138,19 +137,16 @@ export default function History() {
                                 : pick.picked_team || '—'}
                           </p>
                           {hasGame && pick.home_score !== null && (
-                            <p className="text-xs text-gray-600 mt-0.5">
+                            <p className="text-xs text-chalk-faint mt-0.5 font-mono">
                               Final: {pick.home_team} {pick.home_score}–{pick.away_score} {pick.away_team}
                             </p>
                           )}
                         </div>
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${resultPill(pick.result)}`}>
-                          {pick.result.toUpperCase()}
-                        </span>
+                        <ResultChip result={pick.result} />
                       </div>
                     );
                   })
                 ) : (
-                  // Live picks: full game detail
                   week.picks.map(pick => {
                     const isTotalPick = pick.picked_team === 'over' || pick.picked_team === 'under';
                     const pickedTeam = isTotalPick ? null : (pick.picked_team === 'home' ? pick.home_team : pick.away_team);
@@ -160,24 +156,22 @@ export default function History() {
                       : pick.picked_team === 'home' ? parseFloat(pick.home_spread) : -parseFloat(pick.home_spread);
 
                     return (
-                      <div key={pick.id} className="px-4 py-3 flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-sm text-white">{pick.display_name}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">
+                      <div key={pick.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm text-chalk">{pick.display_name}</p>
+                          <p className="text-xs text-chalk-dim mt-0.5 font-mono">
                             {isTotalPick
                               ? `${pick.picked_team === 'over' ? 'Over' : 'Under'} ${spread} · ${pick.home_team} vs ${pick.away_team}`
                               : `${pickedTeam} ${formatSpread(spread)} vs ${opponent}`}
                           </p>
                           {pick.home_score !== null && (
-                            <p className="text-xs text-gray-600 mt-0.5">
+                            <p className="text-xs text-chalk-faint mt-0.5 font-mono">
                               Final: {pick.home_team} {pick.home_score}–{pick.away_score} {pick.away_team}
                               {isTotalPick && ` (${pick.home_score + pick.away_score} pts)`}
                             </p>
                           )}
                         </div>
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${resultPill(pick.result)}`}>
-                          {pick.result === 'pending' ? '—' : pick.result.toUpperCase()}
-                        </span>
+                        <ResultChip result={pick.result} />
                       </div>
                     );
                   })

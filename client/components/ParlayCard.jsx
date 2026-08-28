@@ -6,19 +6,10 @@ import TrashTalk from './TrashTalk.jsx';
 import WeekRecap from './WeekRecap.jsx';
 
 function formatSpread(spread) {
+  if (spread === null || spread === undefined || spread === '') return '';
   const n = parseFloat(spread);
   return n > 0 ? `+${n}` : `${n}`;
 }
-
-function resultBadge(result) {
-  switch (result) {
-    case 'win': return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-green-500/20 text-green-400">W</span>;
-    case 'loss': return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/20 text-red-400">L</span>;
-    case 'push': return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-400">P</span>;
-    default: return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-700 text-gray-400">—</span>;
-  }
-}
-
 
 function getParlayResult(picks) {
   if (picks.length === 0) return null;
@@ -39,6 +30,56 @@ function getConsensusResult(game, psuSpread) {
   if (diff > 0) return 'win';
   if (diff < 0) return 'loss';
   return 'push';
+}
+
+// One printed line on the slip: name + line up top, and the matchup underneath —
+// the opponent and kickoff before the game, the score once it's on.
+function Leg({ who, bet, result, gameStatus, detail, killed }) {
+  const live = result === 'pending' && gameStatus === 'in_progress';
+
+  let mark = null;
+  if (killed) mark = <span className="stamp-mini">Busted</span>;
+  else if (result === 'win') mark = <span className="mark w">W</span>;
+  else if (result === 'loss') mark = <span className="mark l">L</span>;
+  else if (result === 'push') mark = <span className="mark">P</span>;
+  else if (live) mark = <span className="mark live"><span className="dot pulse-dot" />Live</span>;
+
+  return (
+    <div className={`leg${killed ? ' killed' : ''}`}>
+      <span className="lede">
+        <span className="who">{who}</span>
+        <span className="bet">{bet}</span>
+      </span>
+      {mark}
+      {detail && <span className="score">{detail}</span>}
+    </div>
+  );
+}
+
+// pickedSide: 'home' | 'away' | null (null / totals show the raw matchup)
+function legDetail(g, pickedSide, isTotal) {
+  if (!g) return null;
+  const { home_team, away_team, home_abbr, away_abbr, home_score, away_score, status, commence_time } = g;
+
+  let matchup;
+  if (isTotal || !pickedSide) {
+    matchup = `${away_team} @ ${home_team}`;
+  } else {
+    const opp = pickedSide === 'home' ? away_team : home_team;
+    matchup = `${pickedSide === 'home' ? 'vs' : '@'} ${opp}`;
+  }
+
+  if (status === 'complete' && home_score !== null) {
+    const pts = isTotal ? ` · ${home_score + away_score} pts` : '';
+    return <>{matchup} · Final <b>{away_abbr} {away_score}–{home_score} {home_abbr}</b>{pts}</>;
+  }
+  if (status === 'in_progress' && home_score !== null) {
+    return <>{matchup} · <span className="q">Live</span> <b>{away_abbr} {away_score}–{home_score} {home_abbr}</b></>;
+  }
+  const when = commence_time
+    ? new Date(commence_time).toLocaleDateString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' })
+    : null;
+  return <>{matchup}{when ? ` · ${when}` : ''}</>;
 }
 
 export default function ParlayCard() {
@@ -106,43 +147,165 @@ export default function ParlayCard() {
     load();
     const interval = setInterval(load, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadReactions]);
 
-  if (loading) return <div className="p-6 text-center text-gray-500">Loading parlay...</div>;
-  if (error) return <div className="p-6 text-center text-red-400">{error}</div>;
+  if (loading) return <div className="p-6 text-center text-chalk-faint">Loading the slip…</div>;
+  if (error) return <div className="p-6 text-center text-bust">{error}</div>;
 
   const consensusResult = consensus ? getConsensusResult(consensus.game, consensus.psuSpread) : null;
-  const allLegs = consensus ? [...picks, { _consensus: true, result: consensusResult || 'pending' }] : picks;
+  const consensusLeg = consensus
+    ? { _consensus: true, result: consensusResult || 'pending', game: consensus.game, psuSpread: consensus.psuSpread }
+    : null;
+
+  // Legs read top to bottom in kickoff order, like a real slip.
+  const legKickoff = (l) => {
+    const t = l._consensus ? l.game?.commence_time : l.commence_time;
+    return t ? new Date(t).getTime() : Infinity;
+  };
+  const allLegs = (consensusLeg ? [consensusLeg, ...picks] : [...picks])
+    .slice()
+    .sort((a, b) => legKickoff(a) - legKickoff(b));
+
+  const canEditLinks = currentUser?.isAdmin || currentUser?.isLinkAdmin;
+  const pickedUserIds = new Set(picks.map(p => p.user_id));
+  const missing = allUsers.filter(u => !pickedUserIds.has(u.id));
+
+  const legCount = allLegs.length;
+  const settled = allLegs.filter(l => l.result !== 'pending');
+  const wins = allLegs.filter(l => l.result === 'win').length;
+  const losses = allLegs.filter(l => l.result === 'loss').length;
+  const pending = legCount - settled.length;
   const parlayResult = getParlayResult(allLegs);
-  const parlayBanner = {
-    win:     { bg: 'bg-green-500/10 border-green-500/30',   text: 'text-green-400',  label: 'Parlay Wins!' },
-    loss:    { bg: 'bg-red-500/10 border-red-500/30',       text: 'text-red-400',    label: 'Parlay Loses' },
-    push:    { bg: 'bg-yellow-500/10 border-yellow-500/30', text: 'text-yellow-400', label: 'Parlay Pushes' },
-    pending: { bg: 'bg-gray-800/50 border-gray-700',        text: 'text-gray-400',   label: 'In Progress' },
-  }[parlayResult || 'pending'];
+
+  let verdict;
+  if (legCount === 0) verdict = null;
+  else if (pending > 0) verdict = { cls: 'live', label: 'Live', dot: true };
+  else if (parlayResult === 'win') verdict = { cls: 'live', label: 'Cashed' };
+  else if (parlayResult === 'loss') verdict = { cls: 'dead', label: 'Busted' };
+  else verdict = { cls: 'dead', label: 'Push' };
+
+  // The first losing leg is the one that ended it.
+  const firstLossIndex = allLegs.findIndex(l => l.result === 'loss');
+
+  const allSettled = legCount > 0 && pending === 0;
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Week {week} Parlay</h2>
-        <span className="text-xs text-gray-600">{allLegs.length} {allLegs.length === 1 ? 'leg' : 'legs'}</span>
+    <div className="p-4 flex flex-col gap-4">
+      <div>
+        <p className="eyebrow mb-1">The group parlay</p>
+        <h2 className="dateline text-[2.4rem]">Week {week}</h2>
       </div>
 
-      {/* Parlay links — always show buttons; admins can edit */}
+      {legCount === 0 ? (
+        <div className="slip">
+          <div className="slip-head">
+            <span className="t">PSU PARLAY</span>
+            <span className="meta">Wk {week} · {season}<br />No legs yet</span>
+          </div>
+          <p className="text-ink-dim text-sm py-6 text-center font-mono">
+            Nobody's on the board yet this week.
+          </p>
+        </div>
+      ) : (
+        <div className="slip">
+          <div className="slip-head">
+            <span className="t">PSU PARLAY</span>
+            <span className="meta">
+              Wk {week} · {season}<br />
+              {legCount} {legCount === 1 ? 'leg' : 'legs'}
+              {missing.length > 0 && <><br />{missing.length} still out</>}
+            </span>
+          </div>
+
+          <div className="slip-verdict">
+            <span className={`chip ${verdict.cls}`}>
+              {verdict.dot && <span className="dot pulse-dot" />}
+              {verdict.label}
+            </span>
+            <span className="sep">·</span>
+            <span className="cov">
+              {wins} of {legCount} covered
+              {pending > 0 && ` · ${pending} to play`}
+            </span>
+          </div>
+
+          <div className="legs">
+            {allLegs.map((leg, i) => {
+              if (leg._consensus) {
+                const g = leg.game;
+                const psuIsHome = g?.home_team?.includes('Penn State');
+                return (
+                  <Leg
+                    key="consensus"
+                    who="Group pick"
+                    bet={`Penn State ${formatSpread(leg.psuSpread)}`}
+                    result={leg.result}
+                    gameStatus={g?.status}
+                    detail={legDetail(g, psuIsHome ? 'home' : 'away', false)}
+                    killed={i === firstLossIndex}
+                  />
+                );
+              }
+
+              const isTotal = leg.picked_team === 'over' || leg.picked_team === 'under';
+              const team = isTotal
+                ? (leg.picked_team === 'over' ? 'Over' : 'Under')
+                : (leg.picked_team === 'home' ? leg.home_team : leg.away_team);
+              const bet = `${team} ${isTotal ? leg.current_picked_spread : formatSpread(leg.current_picked_spread)}`.trim();
+
+              return (
+                <Leg
+                  key={leg.id}
+                  who={leg.display_name}
+                  bet={bet}
+                  result={leg.result}
+                  gameStatus={leg.game_status}
+                  detail={legDetail(leg, isTotal ? null : leg.picked_team, isTotal)}
+                  killed={i === firstLossIndex}
+                />
+              );
+            })}
+          </div>
+
+          <div className="slip-foot">
+            <span>{legCount}-leg parlay</span>
+            <span>All or nothing</span>
+          </div>
+        </div>
+      )}
+
+      {/* Still out */}
+      {legCount > 0 && missing.length > 0 && (
+        <div className="card px-4 py-2.5 flex items-center gap-2 flex-wrap">
+          <span className="eyebrow">No pick yet</span>
+          {missing.map(u => (
+            <span
+              key={u.id}
+              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                u.id === currentUser?.id ? 'bg-cash/25 text-cash' : 'bg-navy-sink text-chalk-dim'
+              }`}
+            >
+              {u.username}{u.id === currentUser?.id ? ' (you)' : ''}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Sportsbook links */}
       {editingLinks ? (
-        <div className="space-y-2">
+        <div className="card p-3 flex flex-col gap-2">
           {[
             { label: 'DraftKings', value: dkInput, onChange: setDkInput },
-            { label: 'FanDuel',    value: fdInput, onChange: setFdInput },
+            { label: 'FanDuel', value: fdInput, onChange: setFdInput },
           ].map(({ label, value, onChange }) => (
-            <div key={label} className="flex gap-2">
-              <span className="text-xs text-gray-500 font-medium w-24 shrink-0 flex items-center">{label}</span>
+            <div key={label} className="flex items-center gap-2">
+              <span className="eyebrow w-24 shrink-0">{label}</span>
               <input
                 type="url"
                 value={value}
                 onChange={e => onChange(e.target.value)}
-                placeholder={`Paste ${label} parlay link...`}
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                placeholder={`Paste the ${label} link`}
+                className="field !py-2 text-sm"
               />
             </div>
           ))}
@@ -152,7 +315,7 @@ export default function ParlayCard() {
               onClick={async () => {
                 setLinkSaving(true);
                 try {
-                  const normalize = u => u ? (u.startsWith('http') ? u : `https://${u}`) : null;
+                  const normalize = u => (u ? (u.startsWith('http') ? u : `https://${u}`) : null);
                   const res = await api.setParlayLink(week, season, normalize(dkInput.trim()), normalize(fdInput.trim()));
                   setParlayLinks(res);
                   setEditingLinks(false);
@@ -160,9 +323,9 @@ export default function ParlayCard() {
                   setLinkSaving(false);
                 }
               }}
-              className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg"
+              className="btn btn-primary flex-1"
             >
-              {linkSaving ? 'Saving...' : 'Save Links'}
+              {linkSaving ? 'Saving…' : 'Save links'}
             </button>
             <button
               onClick={() => {
@@ -170,7 +333,7 @@ export default function ParlayCard() {
                 setFdInput(parlayLinks.fanduel_url || '');
                 setEditingLinks(false);
               }}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium rounded-lg"
+              className="btn btn-ghost"
             >
               Cancel
             </button>
@@ -179,170 +342,70 @@ export default function ParlayCard() {
       ) : (
         <div className="flex gap-2">
           {[
-            { label: 'DraftKings', url: parlayLinks.draftkings_url, activeClass: 'bg-green-600/20 hover:bg-green-600/30 border-green-500/30 text-green-400' },
-            { label: 'FanDuel',    url: parlayLinks.fanduel_url,    activeClass: 'bg-blue-600/20 hover:bg-blue-600/30 border-blue-500/30 text-blue-400' },
-          ].map(({ label, url, activeClass }) => url ? (
-            <a key={label} href={url} target="_blank" rel="noopener noreferrer"
-              className={`flex-1 flex items-center justify-center gap-1.5 border font-medium text-sm rounded-xl px-4 py-3 ${activeClass}`}>
-              🎰 {label}
-            </a>
-          ) : (
-            <span key={label}
-              className="flex-1 flex items-center justify-center gap-1.5 border border-gray-700 text-gray-600 font-medium text-sm rounded-xl px-4 py-3 select-none">
-              🎰 {label}
-            </span>
-          ))}
-          {(currentUser?.isAdmin || currentUser?.isLinkAdmin) && (
+            { label: 'DraftKings', url: parlayLinks.draftkings_url, cls: 'dk' },
+            { label: 'FanDuel', url: parlayLinks.fanduel_url, cls: 'fd' },
+          ].map(({ label, url, cls }) =>
+            url ? (
+              <a key={label} href={url} target="_blank" rel="noopener noreferrer" className={`book ${cls}`}>
+                Open in {label}
+              </a>
+            ) : (
+              <span key={label} className="book opacity-55 select-none">{label}</span>
+            )
+          )}
+          {canEditLinks && (
             <button
               onClick={() => setEditingLinks(true)}
-              title="Edit links"
-              className="px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 hover:text-gray-200 text-sm rounded-xl"
+              className="btn btn-ghost !px-3"
+              aria-label="Edit sportsbook links"
             >
-              ✏️
+              Edit
             </button>
           )}
         </div>
       )}
 
-      {picks.length === 0 && !consensus ? (
-        <div className="text-center py-12 text-gray-600">
-          <p className="text-4xl mb-3">🎰</p>
-          <p>No picks yet this week</p>
-        </div>
-      ) : (
-        <>
-          {/* Who still needs a pick */}
-          {(() => {
-            const pickedUserIds = new Set(picks.map(p => p.user_id));
-            const missing = allUsers.filter(u => !pickedUserIds.has(u.id));
-            if (missing.length === 0) return null;
+      {/* Week recap (all legs settled) */}
+      {allSettled && <WeekRecap picks={picks} allTimeRecord={parlayRecord} />}
+
+      {/* Reactions + notes — the group's takes, per pick */}
+      {picks.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="eyebrow">Reactions</p>
+          {picks.map(pick => {
+            const isTotal = pick.picked_team === 'over' || pick.picked_team === 'under';
+            const team = isTotal
+              ? (pick.picked_team === 'over' ? 'Over' : 'Under')
+              : (pick.picked_team === 'home' ? pick.home_team : pick.away_team);
+            const streak = streaks[pick.user_id];
             return (
-              <div className="bg-gray-800/60 border border-gray-700 rounded-xl px-4 py-2.5 flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-gray-500 font-medium">Still needs a pick:</span>
-                {missing.map(u => (
-                  <span key={u.id} className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    u.id === currentUser?.id
-                      ? 'bg-blue-600/30 text-blue-300'
-                      : 'bg-gray-700 text-gray-300'
-                  }`}>
-                    {u.username}{u.id === currentUser?.id ? ' (you)' : ''}
+              <div key={pick.id} className="card p-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm text-chalk">{pick.display_name}</span>
+                  {streak && (
+                    <span className={`streak-chip ${streak.type === 'win' ? 'up' : 'down'}`}>
+                      {streak.type === 'win' ? 'W' : 'L'}{streak.count}
+                    </span>
+                  )}
+                  <span className="text-xs font-mono text-chalk-faint ml-auto">
+                    {team} {isTotal ? pick.current_picked_spread : formatSpread(pick.current_picked_spread)}
                   </span>
-                ))}
+                </div>
+                {pick.note && (
+                  <p className="text-xs text-chalk-dim italic mt-1">"{pick.note}"</p>
+                )}
+                <ReactionBar
+                  pickId={pick.id}
+                  reactions={reactions.filter(r => r.pick_id === pick.id)}
+                  onUpdate={() => loadReactions(week, season)}
+                />
               </div>
             );
-          })()}
-
-          {/* Week recap (shown when all picks settled) */}
-          <WeekRecap picks={picks} allTimeRecord={parlayRecord} />
-
-          {/* Parlay status banner */}
-          {picks.some(p => p.result === 'pending') && (
-          <div className={`rounded-xl border px-4 py-3 ${parlayBanner.bg}`}>
-            <div className="flex items-center justify-between">
-              <span className={`font-bold ${parlayBanner.text}`}>{parlayBanner.label}</span>
-              <span className="text-sm text-gray-500">
-                {allLegs.filter(p => p.result === 'win').length}/{allLegs.length} covering
-              </span>
-            </div>
-          </div>
-          )}
-
-          {/* Individual picks */}
-          <div className="space-y-3">
-            {/* Group consensus PSU pick */}
-            {consensus && (() => {
-              const { game, psuSpread } = consensus;
-              const psuIsHome = game ? game.home_team.includes('Penn State') : null;
-              const opponent = game ? (psuIsHome ? game.away_team : game.home_team) : null;
-              const location = psuIsHome ? 'vs' : '@';
-              const isLive = game?.status === 'in_progress';
-              const isComplete = game?.status === 'complete';
-              return (
-                <div className="bg-gray-900 rounded-xl border border-blue-500/40 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white text-sm">PSU Pick</span>
-                      <span className="text-xs bg-blue-500/20 text-blue-400 font-semibold px-2 py-0.5 rounded-full">GROUP</span>
-                    </div>
-                    {resultBadge(consensusResult)}
-                  </div>
-                  <div className="flex items-baseline gap-1 mb-1">
-                    <span className="font-bold text-white">Penn State</span>
-                    {psuSpread !== null && <span className="text-blue-400 font-semibold">{formatSpread(psuSpread)}</span>}
-                    {opponent && <span className="text-gray-600 text-xs">{location} {opponent}</span>}
-                  </div>
-                  {(isLive || isComplete) && game.home_score !== null && (
-                    <div className={`mt-2 text-xs font-medium ${isLive ? 'text-yellow-400' : 'text-gray-400'}`}>
-                      {isLive && <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5 animate-pulse" />}
-                      {game.home_abbr} {game.home_score} – {game.away_score} {game.away_abbr}
-                      {isLive && ' (Live)'}
-                      {isComplete && ' (Final)'}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            {picks.map(pick => {
-              const isTotalPick = pick.picked_team === 'over' || pick.picked_team === 'under';
-              const pickedTeam = isTotalPick ? (pick.picked_team === 'over' ? 'Over' : 'Under') : (pick.picked_team === 'home' ? pick.home_team : pick.away_team);
-              const opponent   = isTotalPick ? `${pick.home_team} vs ${pick.away_team}` : (pick.picked_team === 'home' ? pick.away_team : pick.home_team);
-              const isGameLive = pick.game_status === 'in_progress';
-              const isComplete = pick.game_status === 'complete';
-              const pickReactions = reactions.filter(r => r.pick_id === pick.id);
-
-              return (
-                <div key={pick.id} className="bg-gray-900 rounded-xl border border-gray-800 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white text-sm">{pick.display_name}</span>
-                      {streaks[pick.user_id] && (() => {
-                        const { type, count } = streaks[pick.user_id];
-                        return (
-                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                            type === 'win' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                          }`}>
-                            {type === 'win' ? 'W' : 'L'}{count}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                    {resultBadge(pick.result)}
-                  </div>
-
-                  <div className="flex items-baseline gap-1 mb-1">
-                    <span className="font-bold text-white">{pickedTeam}</span>
-                    <span className="text-blue-400 font-semibold">{formatSpread(pick.current_picked_spread)}</span>
-                    <span className="text-gray-600 text-xs">vs {opponent}</span>
-                  </div>
-
-                  {pick.note && (
-                    <p className="text-xs text-gray-400 italic mt-1">"{pick.note}"</p>
-                  )}
-
-                  {(isGameLive || isComplete) && (
-                    <div className={`mt-2 text-xs font-medium ${isGameLive ? 'text-yellow-400' : 'text-gray-400'}`}>
-                      {isGameLive && <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5 animate-pulse" />}
-                      {pick.home_abbr} {pick.home_score} – {pick.away_score} {pick.away_abbr}
-                      {isTotalPick && pick.home_score !== null && ` (${pick.home_score + pick.away_score} pts)`}
-                      {isGameLive && ' (Live)'}
-                      {isComplete && ' (Final)'}
-                    </div>
-                  )}
-
-                  <ReactionBar
-                    pickId={pick.id}
-                    reactions={pickReactions}
-                    onUpdate={() => loadReactions(week, season)}
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          <TrashTalk week={week} season={season} />
-        </>
+          })}
+        </div>
       )}
+
+      {legCount > 0 && <TrashTalk week={week} season={season} />}
     </div>
   );
 }

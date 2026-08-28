@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api/index.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { matchesSearch, CONF_ORDER, getConference } from '../utils/conferences.js';
@@ -100,7 +100,7 @@ export default function WeekPicker() {
     setSuccess('');
     try {
       await api.submitPick(gameId, pickedTeam);
-      setSuccess('Pick submitted!');
+      setSuccess('Pick submitted.');
       await load();
     } catch (err) {
       setError(err.message);
@@ -154,100 +154,100 @@ export default function WeekPicker() {
   }, [games]);
 
   const filteredGames = useMemo(() => {
-    return games.filter(g => {
+    const list = games.filter(g => {
       if (new Date(g.commence_time).getDay() !== 6) return false;
       const homeConf = g.conference || getConference(g.home_team);
       const awayConf = getConference(g.away_team);
       const matchesConf = activeConf === 'All' || homeConf === activeConf || awayConf === activeConf;
       return matchesConf && matchesSearch(g, search);
     });
-  }, [games, activeConf, search]);
 
-  if (loading) return <div className="p-6 text-center text-gray-500">Loading games...</div>;
+    // The game you've picked is always shown, and always first — no matter the
+    // filter or search, so you never lose track of it.
+    if (myPick?.game_id) {
+      const picked = games.find(g => g.id === myPick.game_id);
+      if (picked) return [picked, ...list.filter(g => g.id !== picked.id)];
+    }
+    return list;
+  }, [games, activeConf, search, myPick]);
+
+  if (loading) return <div className="p-6 text-center text-chalk-faint">Loading games…</div>;
 
   if (games.length === 0) {
     return (
-      <div className="p-6 text-center text-gray-500">
-        <div className="text-4xl mb-3">🏈</div>
-        <p className="font-medium text-gray-300">No games available</p>
-        <p className="text-sm mt-1">Games will appear here when the season starts.</p>
+      <div className="p-8 text-center">
+        <p className="dateline text-2xl mb-2">No games yet</p>
+        <p className="text-sm text-chalk-dim">They'll show up here once the week's lines are posted.</p>
       </div>
     );
   }
 
   const isLocked = () => deadline ? new Date() >= deadline : false;
+  const cd = timeLeft
+    ? timeLeft.total < 3600000 ? 'error' : timeLeft.total < 86400000 ? 'warn' : 'neutral'
+    : null;
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Week {week} — Pick Your Game</h2>
+    <div className="p-4 flex flex-col gap-4">
+      <div>
+        <p className="eyebrow mb-1">Saturday slate · pick one game</p>
+        <h2 className="dateline text-[2.4rem]">Week {week}</h2>
       </div>
 
       {/* Countdown to first kickoff */}
       {timeLeft && (
-        <div className={`rounded-xl border px-4 py-3 flex items-center justify-between ${
-          timeLeft.total < 3600000 ? 'bg-red-500/10 border-red-500/30' :
-          timeLeft.total < 86400000 ? 'bg-yellow-500/10 border-yellow-500/30' :
-          'bg-gray-800/50 border-gray-700'
-        }`}>
-          <span className={`text-xs font-semibold uppercase tracking-wide ${
-            timeLeft.total < 3600000 ? 'text-red-400' :
-            timeLeft.total < 86400000 ? 'text-yellow-400' : 'text-gray-500'
-          }`}>
-            {myPick ? 'Locks in' : 'Pick deadline'}
+        <div
+          className={`flex items-center justify-between rounded-lg border px-3.5 py-2.5 ${
+            cd === 'error' ? 'border-bust/40 bg-bust/10'
+            : cd === 'warn' ? 'border-favor/40 bg-favor/10'
+            : 'border-line bg-navy-raised'
+          }`}
+        >
+          <span className={`eyebrow ${cd === 'error' ? '!text-bust' : cd === 'warn' ? '!text-favor' : ''}`}>
+            {myPick ? 'Your pick locks in' : 'Pick deadline'}
           </span>
-          <span className={`font-mono font-bold tabular-nums ${
-            timeLeft.total < 3600000 ? 'text-red-400' :
-            timeLeft.total < 86400000 ? 'text-yellow-300' : 'text-white'
+          <span className={`font-mono font-semibold tabular-nums text-sm ${
+            cd === 'error' ? 'text-bust' : cd === 'warn' ? 'text-favor' : 'text-chalk'
           }`}>
             {timeLeft.d > 0 && `${timeLeft.d}d `}
-            {(timeLeft.d > 0 || timeLeft.h > 0) && `${timeLeft.h}h `}
-            {`${String(timeLeft.m).padStart(2,'0')}m `}
-            {timeLeft.total < 3600000 && `${String(timeLeft.s).padStart(2,'0')}s`}
+            {(timeLeft.d > 0 || timeLeft.h > 0) && `${String(timeLeft.h).padStart(2, '0')}h `}
+            {`${String(timeLeft.m).padStart(2, '0')}m`}
+            {timeLeft.total < 3600000 && ` ${String(timeLeft.s).padStart(2, '0')}s`}
           </span>
-        </div>
-      )}
-
-      {myPick && (
-        <div className="flex justify-end">
-          <span className="text-xs bg-blue-600/20 text-blue-400 px-2 py-1 rounded-full">Pick made</span>
         </div>
       )}
 
       {/* Search */}
       <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-chalk-faint pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
         </svg>
         <input
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search teams..."
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          placeholder="Search teams…"
+          className="field !py-2.5 pl-9 pr-9 text-sm"
         />
         {search && (
           <button
             onClick={() => setSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+            aria-label="Clear search"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-chalk-faint hover:text-chalk"
           >
             ✕
           </button>
         )}
       </div>
 
-      {/* Conference filter tabs */}
+      {/* Conference filter */}
       {conferences.length > 2 && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none -mx-4 px-4">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-4 px-4">
           {conferences.map(conf => (
             <button
               key={conf}
               onClick={() => setActiveConf(conf)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                activeConf === conf
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:text-white'
-              }`}
+              className={`pill ${activeConf === conf ? 'is-on' : ''}`}
             >
               {conf}
             </button>
@@ -256,35 +256,48 @@ export default function WeekPicker() {
       )}
 
       {consensusReached && !myPick && (
-        <p className="text-yellow-400 text-sm bg-yellow-500/10 rounded-lg px-3 py-2">
-          Penn State consensus was reached — your pick was cleared. Please choose a new game.
+        <p className="banner banner-warn">
+          The group locked in Penn State, so your pick was cleared. Choose a new game.
         </p>
       )}
-      {error && <p className="text-red-400 text-sm bg-red-400/10 rounded-lg px-3 py-2">{error}</p>}
-      {success && <p className="text-green-400 text-sm bg-green-400/10 rounded-lg px-3 py-2">{success}</p>}
+      {error && <p className="banner banner-error">{error}</p>}
+      {success && <p className="banner banner-info">{success}</p>}
 
+      {/* Your pick — the helmet stripe */}
       {myPick && (
-        <div className="bg-blue-600/10 border border-blue-600/30 rounded-xl p-4">
-          <p className="text-xs text-blue-400 font-medium uppercase tracking-wide mb-1">Your Pick</p>
-          {myPick.picked_team === 'over' || myPick.picked_team === 'under' ? (
-            <>
-              <p className="font-semibold text-white">
+        <div className="bg-stripe text-ink rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <span className="eyebrow !text-ink-dim">Your pick</span>
+            {!isLocked() && (
+              <button
+                onClick={handleClearPick}
+                disabled={submitting}
+                className="text-xs font-semibold text-bust-ink underline disabled:opacity-50"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          <p className="font-semibold text-lg mt-1 flex items-baseline gap-2">
+            {myPick.picked_team === 'over' || myPick.picked_team === 'under' ? (
+              <>
                 {myPick.picked_team === 'over' ? 'Over' : 'Under'}
-                <span className="text-blue-300 ml-2">{myPick.spread_at_pick}</span>
-              </p>
-              <p className="text-xs text-gray-500 mt-1">{myPick.home_team} vs {myPick.away_team}</p>
-            </>
-          ) : (
-            <>
-              <p className="font-semibold text-white">
+                <span className="font-mono text-cash-ink">{myPick.spread_at_pick}</span>
+              </>
+            ) : (
+              <>
                 {myPick.picked_team === 'home' ? myPick.home_team : myPick.away_team}
-                <span className="text-blue-300 ml-2">{formatSpread(myPick.spread_at_pick)}</span>
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {myPick.picked_team === 'home' ? myPick.away_team : myPick.home_team} (opponent)
-              </p>
-            </>
-          )}
+                <span className="font-mono text-cash-ink">{formatSpread(myPick.spread_at_pick)}</span>
+              </>
+            )}
+          </p>
+          <p className="text-xs text-ink-dim mt-0.5">
+            {myPick.picked_team === 'over' || myPick.picked_team === 'under'
+              ? `${myPick.home_team} vs ${myPick.away_team}`
+              : `vs ${myPick.picked_team === 'home' ? myPick.away_team : myPick.home_team}`}
+          </p>
+
           {!isLocked() ? (
             <div className="mt-3">
               <div className="flex gap-2">
@@ -293,161 +306,107 @@ export default function WeekPicker() {
                   value={note}
                   onChange={e => setNote(e.target.value.slice(0, 100))}
                   onBlur={handleSaveNote}
-                  placeholder="Add a trash talk line... (optional)"
-                  className="flex-1 bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                  placeholder="Add a trash-talk line (optional)"
+                  className="flex-1 rounded-md border border-ink/15 bg-paper-shade/40 px-3 py-1.5 text-xs text-ink placeholder-ink-dim focus:outline-none focus:border-cash-ink"
                 />
                 <button
                   onClick={handleSaveNote}
                   disabled={noteSaving || note === (myPick.note || '')}
-                  className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-40 transition-colors px-1"
+                  className="text-xs font-semibold text-cash-ink disabled:opacity-40 px-1"
                 >
-                  {noteSaving ? '...' : 'Save'}
+                  {noteSaving ? '…' : 'Save'}
                 </button>
               </div>
-              <p className="text-right text-xs text-gray-700 mt-0.5">{note.length}/100</p>
+              <p className="text-right text-[0.65rem] text-ink-dim mt-0.5">{note.length}/100</p>
             </div>
           ) : myPick.note ? (
-            <p className="text-xs text-gray-400 italic mt-2">"{myPick.note}"</p>
+            <p className="text-xs text-ink-dim italic mt-2">"{myPick.note}"</p>
           ) : null}
 
-          <div className="flex items-center justify-between mt-2">
-            <p className="text-xs text-gray-500">Locked before kickoff — you can change until then</p>
-            {!isLocked() && (
-              <button
-                onClick={handleClearPick}
-                disabled={submitting}
-                className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50 transition-colors"
-              >
-                Clear pick
-              </button>
-            )}
-          </div>
+          <p className="text-[0.65rem] text-ink-dim mt-2">Locks at kickoff — change it any time before then.</p>
         </div>
       )}
 
       {filteredGames.length === 0 && (
-        <p className="text-center text-gray-600 py-8 text-sm">No games match "{search}"</p>
+        <p className="text-center text-chalk-faint py-8 text-sm">Nothing matches "{search}"</p>
       )}
 
-      <div className="space-y-3">
+      {/* The line sheet */}
+      <div className="flex flex-col">
         {filteredGames.map(game => {
           const locked = isLocked(game);
           const isMyGame = myPick?.game_id === game.id;
           const takenBy = !isMyGame ? claimedGames[game.id] : null;
           const unavailable = locked || !!takenBy;
+          const homeFav = parseFloat(game.home_spread) < 0;
+          const awayFav = parseFloat(game.home_spread) > 0;
+
+          const Side = ({ team, tag, side, spread, favored, rank }) => {
+            const mine = isMyGame && myPick.picked_team === side;
+            return (
+              <button
+                disabled={unavailable || submitting}
+                onClick={() => handlePick(game.id, side)}
+                className={`lineside ${mine ? 'is-mine' : ''} ${takenBy ? 'is-taken' : ''}`}
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  {mine && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-cash-ink flex-shrink-0" />
+                  )}
+                  {rank && (
+                    <span className={`font-mono text-[0.62rem] font-semibold flex-shrink-0 ${mine ? 'text-ink-dim' : 'text-chalk-faint'}`}>
+                      #{rank}
+                    </span>
+                  )}
+                  <span className="font-medium truncate">{team}</span>
+                  {tag && <span className="eyebrow !text-[0.55rem] flex-shrink-0">{tag}</span>}
+                </span>
+                <span className={`spread ${favored ? 'fav' : ''}`}>{spread}</span>
+              </button>
+            );
+          };
 
           return (
-            <div
-              key={game.id}
-              className={`bg-gray-900 rounded-xl border transition-colors ${
-                isMyGame ? 'border-blue-600/50' : takenBy ? 'border-gray-800 opacity-50' : 'border-gray-800'
-              }`}
-            >
-              <div className="px-4 pt-3 pb-1 flex items-center justify-between">
-                <span className="text-xs text-gray-500">{formatTime(game.commence_time)}</span>
-                {takenBy && (
-                  <span className="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">
-                    {takenBy}'s pick
-                  </span>
-                )}
-                {!takenBy && locked && (
-                  <span className="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">
-                    {game.status === 'complete' ? 'Final' : game.status === 'in_progress' ? 'Live' : 'Locked'}
-                  </span>
-                )}
-                {game.status === 'complete' && (
-                  <span className="text-xs text-gray-400">
-                    {game.home_abbr} {game.home_score} – {game.away_score} {game.away_abbr}
-                  </span>
-                )}
+            <div key={game.id} className="linegame">
+              <div className="flex items-center justify-between text-[0.62rem] font-mono text-chalk-faint mb-1">
+                <span>{formatTime(game.commence_time)}</span>
+                <span>
+                  {takenBy
+                    ? `${takenBy}'s pick`
+                    : game.status === 'complete'
+                      ? `Final · ${game.home_abbr} ${game.home_score}–${game.away_score} ${game.away_abbr}`
+                      : game.status === 'in_progress'
+                        ? 'Live'
+                        : locked ? 'Locked' : ''}
+                </span>
               </div>
 
-              {/* Home team */}
-              <button
-                disabled={unavailable || submitting}
-                onClick={() => handlePick(game.id, 'home')}
-                className={`w-full flex items-center justify-between px-4 py-3 hover:bg-gray-800 transition-colors rounded-t-none ${
-                  isMyGame && myPick.picked_team === 'home' ? 'bg-blue-600/20' : ''
-                } disabled:cursor-not-allowed`}
-              >
-                <div className="flex items-center gap-2">
-                  {isMyGame && myPick.picked_team === 'home' && (
-                    <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
-                  )}
-                  {game.home_rank && (
-                    <span className="text-xs text-gray-500 font-semibold">#{game.home_rank}</span>
-                  )}
-                  <span className="font-medium text-white">{game.home_team}</span>
-                  <span className="text-xs text-gray-500">HOME</span>
-                </div>
-                <span className={`font-semibold tabular-nums ${parseFloat(game.home_spread) < 0 ? 'text-yellow-400' : 'text-gray-300'}`}>
-                  {formatSpread(game.home_spread)}
-                </span>
-              </button>
+              <Side
+                team={game.away_team}
+                tag="Away"
+                side="away"
+                spread={formatSpread(-parseFloat(game.home_spread))}
+                favored={awayFav}
+                rank={game.away_rank}
+              />
+              <Side
+                team={game.home_team}
+                tag="Home"
+                side="home"
+                spread={formatSpread(game.home_spread)}
+                favored={homeFav}
+                rank={game.home_rank}
+              />
 
-              <div className="border-t border-gray-800 mx-4" />
-
-              {/* Away team */}
-              <button
-                disabled={unavailable || submitting}
-                onClick={() => handlePick(game.id, 'away')}
-                className={`w-full flex items-center justify-between px-4 py-3 hover:bg-gray-800 transition-colors ${
-                  isMyGame && myPick.picked_team === 'away' ? 'bg-blue-600/20' : ''
-                } disabled:cursor-not-allowed`}
-              >
-                <div className="flex items-center gap-2">
-                  {isMyGame && myPick.picked_team === 'away' && (
-                    <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
-                  )}
-                  {game.away_rank && (
-                    <span className="text-xs text-gray-500 font-semibold">#{game.away_rank}</span>
-                  )}
-                  <span className="font-medium text-white">{game.away_team}</span>
-                  <span className="text-xs text-gray-500">AWAY</span>
-                </div>
-                <span className={`font-semibold tabular-nums ${parseFloat(game.home_spread) > 0 ? 'text-yellow-400' : 'text-gray-300'}`}>
-                  {formatSpread(-parseFloat(game.home_spread))}
-                </span>
-              </button>
-
-              {/* Over / Under — only shown when total is available */}
               {game.total != null && (
-                <>
-                  <div className="border-t border-gray-800 mx-4" />
-                  <div className="flex">
-                    <button
-                      disabled={unavailable || submitting}
-                      onClick={() => handlePick(game.id, 'over')}
-                      className={`flex-1 flex items-center justify-between px-4 py-3 hover:bg-gray-800 transition-colors ${
-                        isMyGame && myPick.picked_team === 'over' ? 'bg-blue-600/20' : ''
-                      } disabled:cursor-not-allowed`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {isMyGame && myPick.picked_team === 'over' && (
-                          <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
-                        )}
-                        <span className="font-medium text-white">Over</span>
-                      </div>
-                      <span className="font-semibold tabular-nums text-gray-300">{game.total}</span>
-                    </button>
-                    <div className="border-l border-gray-800 my-2" />
-                    <button
-                      disabled={unavailable || submitting}
-                      onClick={() => handlePick(game.id, 'under')}
-                      className={`flex-1 flex items-center justify-between px-4 py-3 hover:bg-gray-800 transition-colors ${
-                        isMyGame && myPick.picked_team === 'under' ? 'bg-blue-600/20' : ''
-                      } disabled:cursor-not-allowed`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {isMyGame && myPick.picked_team === 'under' && (
-                          <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
-                        )}
-                        <span className="font-medium text-white">Under</span>
-                      </div>
-                      <span className="font-semibold tabular-nums text-gray-300">{game.total}</span>
-                    </button>
+                <div className="flex gap-2 mt-1">
+                  <div className="flex-1">
+                    <Side team="Over" side="over" spread={String(game.total)} />
                   </div>
-                </>
+                  <div className="flex-1">
+                    <Side team="Under" side="under" spread={String(game.total)} />
+                  </div>
+                </div>
               )}
             </div>
           );

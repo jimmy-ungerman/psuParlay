@@ -59,34 +59,34 @@ export default function TrashTalk({ week, season }) {
   const remaining = 280 - draft.length;
 
   return (
-    <div className="border-t border-gray-800 mt-4 pt-4">
-      <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Trash Talk</h3>
+    <div className="border-t border-line-soft mt-4 pt-4">
+      <h3 className="eyebrow mb-3">Trash talk</h3>
 
       {comments.length === 0 ? (
-        <p className="text-gray-600 text-sm text-center py-4">No comments yet. Start the trash talk.</p>
+        <p className="text-chalk-faint text-sm text-center py-4">Nobody's said anything yet. Go first.</p>
       ) : (
-        <div className="space-y-2 mb-3 max-h-72 overflow-y-auto">
+        <div className="flex flex-col gap-2 mb-3 max-h-72 overflow-y-auto">
           {comments.map(c => {
             const isMe = c.user_id === user?.id;
             return (
               <div key={c.id} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : ''}`}>
                 <div className={`max-w-[80%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
                   {!isMe && (
-                    <span className="text-xs text-gray-500 mb-0.5 ml-1">{c.username}</span>
+                    <span className="text-xs text-chalk-faint mb-0.5 ml-1">{c.username}</span>
                   )}
                   <div className={`px-3 py-2 rounded-2xl text-sm ${
                     isMe
-                      ? 'bg-blue-600 text-white rounded-tr-sm'
-                      : 'bg-gray-800 text-gray-100 rounded-tl-sm'
+                      ? 'bg-cash text-navy rounded-tr-sm'
+                      : 'bg-navy-raised text-chalk rounded-tl-sm'
                   }`}>
                     {c.content}
                   </div>
                   <div className={`flex items-center gap-2 mt-0.5 ${isMe ? 'flex-row-reverse' : ''}`}>
-                    <span className="text-xs text-gray-600">{timeAgo(c.created_at)}</span>
+                    <span className="text-xs text-chalk-faint">{timeAgo(c.created_at)}</span>
                     {isMe && (
                       <button
                         onClick={() => handleDelete(c.id)}
-                        className="text-xs text-gray-700 hover:text-red-500 transition-colors"
+                        className="text-xs text-chalk-faint hover:text-bust transition-colors"
                       >
                         delete
                       </button>
@@ -106,12 +106,12 @@ export default function TrashTalk({ week, season }) {
             value={draft}
             onChange={e => setDraft(e.target.value.slice(0, 280))}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePost(e); } }}
-            placeholder="Say something..."
+            placeholder="Say something…"
             rows={2}
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-none"
+            className="field resize-none text-sm"
           />
           {draft.length > 200 && (
-            <span className={`absolute bottom-2 right-3 text-xs ${remaining < 20 ? 'text-red-400' : 'text-gray-500'}`}>
+            <span className={`absolute bottom-2 right-3 text-xs ${remaining < 20 ? 'text-bust' : 'text-chalk-faint'}`}>
               {remaining}
             </span>
           )}
@@ -119,9 +119,9 @@ export default function TrashTalk({ week, season }) {
         <button
           type="submit"
           disabled={!draft.trim() || posting}
-          className="self-end bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="btn btn-primary self-end"
         >
-          {posting ? 'Sending...' : 'Send'}
+          {posting ? 'Sending…' : 'Send'}
         </button>
       </form>
     </div>

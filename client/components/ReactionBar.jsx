@@ -47,8 +47,8 @@ export default function ReactionBar({ pickId, reactions = [], onUpdate }) {
             title={reactions.filter(r => r.emoji === emoji).map(r => r.username).join(', ')}
             className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors border ${
               isMine
-                ? 'bg-blue-600/30 border-blue-500/50 text-white'
-                : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
+                ? 'bg-cash/25 border-cash/50 text-chalk'
+                : 'bg-navy-sink border-line text-chalk-dim hover:border-chalk-faint'
             }`}
           >
             <span>{emoji}</span>
@@ -63,15 +63,15 @@ export default function ReactionBar({ pickId, reactions = [], onUpdate }) {
           onClick={() => setPickerOpen(o => !o)}
           className={`flex items-center justify-center w-7 h-6 rounded-full border text-xs transition-colors ${
             pickerOpen
-              ? 'bg-gray-700 border-gray-500 text-gray-200'
-              : 'bg-gray-800 border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300'
+              ? 'bg-navy-raised border-chalk-faint text-chalk'
+              : 'bg-navy-sink border-line text-chalk-faint hover:border-chalk-faint hover:text-chalk-dim'
           }`}
         >
           {myReaction ?? '+'}
         </button>
 
         {pickerOpen && (
-          <div className="absolute bottom-full left-0 mb-2 flex gap-1.5 bg-gray-800 border border-gray-700 rounded-2xl px-3 py-2 shadow-2xl z-20">
+          <div className="absolute bottom-full left-0 mb-2 flex gap-1.5 bg-navy-raised border border-line rounded-2xl px-3 py-2 shadow-2xl z-20">
             {EMOJIS.map(emoji => (
               <button
                 key={emoji}
