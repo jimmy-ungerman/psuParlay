@@ -147,7 +147,7 @@ export default function WeekPicker() {
   const conferences = useMemo(() => {
     const present = new Set();
     games.filter(g => new Date(g.commence_time).getDay() === 6).forEach(g => {
-      present.add(g.conference || getConference(g.home_team));
+      present.add(getConference(g.home_team));
       present.add(getConference(g.away_team));
     });
     return ['All', ...CONF_ORDER.filter(c => present.has(c))];
@@ -156,7 +156,7 @@ export default function WeekPicker() {
   const filteredGames = useMemo(() => {
     const list = games.filter(g => {
       if (new Date(g.commence_time).getDay() !== 6) return false;
-      const homeConf = g.conference || getConference(g.home_team);
+      const homeConf = getConference(g.home_team);
       const awayConf = getConference(g.away_team);
       const matchesConf = activeConf === 'All' || homeConf === activeConf || awayConf === activeConf;
       return matchesConf && matchesSearch(g, search);
