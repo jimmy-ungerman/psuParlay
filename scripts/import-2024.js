@@ -262,17 +262,17 @@ const DATA = [
   ['jimmy', 13, 'win',  9,     'Illini +2'],
   ['jimmy', 14, 'win',  23,    'Michigan +20'],
 
-  // ── R-zenti ──────────────────────────────────────────────────────────
+  // ── r-zenti ──────────────────────────────────────────────────────────
   // W2  GT -3:      Syr 31 GT 28.    diff=(28-31)+(-3)=-6
   // W3  WVU -2:     Pitt 38 WVU 34.  diff=(34-38)+(-2)=-6
   // W4  Colorado -1: Colo 38 Baylor 31. diff=(38-31)+(-1)=+6
   // W5  Kansas -2:  Ill 23 Kansas 17. diff=(17-23)+(-2)=-8
   // W12 USC -7:     USC 28 Neb 20.   diff=(28-20)+(-7)=+1
-  ['R-zenti', 2,  'loss', -6,  'GT -3'],
-  ['R-zenti', 3,  'loss', -6,  'WVU -2'],
-  ['R-zenti', 4,  'win',  6,   'Colorado -1'],
-  ['R-zenti', 5,  'loss', -8,  'Kansas -2'],
-  ['R-zenti', 12, 'win',  1,   'USC -7'],
+  ['r-zenti', 2,  'loss', -6,  'GT -3'],
+  ['r-zenti', 3,  'loss', -6,  'WVU -2'],
+  ['r-zenti', 4,  'win',  6,   'Colorado -1'],
+  ['r-zenti', 5,  'loss', -8,  'Kansas -2'],
+  ['r-zenti', 12, 'win',  1,   'USC -7'],
 
   // ── Sundy ─────────────────────────────────────────────────────────────────
   // W1  UGA -13.5:  UGA 34 Clem 3.   diff=(34-3)+(-13.5)=+17.5
@@ -328,7 +328,7 @@ const DATA = [
   ['Tanner', 2,  'win',  12,    'Texas -7'],
   ['Tanner', 13, 'win',  64.5,  'Tenn +8.5'],
 
-  // ── GMoney2458 (Grant Grasha) ─────────────────────────────────────────────
+  // ── G_Money24 (Grant Grasha) ─────────────────────────────────────────────
   // W1  Iowa/IllSt U39.5: Iowa 40 IllSt 0. total=40>39.5 Under ✗ diff=39.5-40=-0.5
   // W2  Tulane +8.5: Tulane 27 KSt 34. diff=(27-34)+8.5=+1.5
   // W3  BC/Mizz U54: Mizzou 27 BC 21. total=48<54 Under ✓ diff=54-48=+6
@@ -343,22 +343,22 @@ const DATA = [
   // W12 Tulane -7.5: Navy 0 Tulane 35. diff=(35-0)+(-7.5)=+27.5
   // W13 IUOSU U52.5: OSU 38 IU 15.  total=53>52.5 Under ✗ diff=52.5-53=-0.5
   // W14 TAMU +4.5:  TAMU 7 Texas 17. diff=(7-17)+4.5=-5.5
-  ['GMoney2458', 1,  'loss', -0.5,  'Under 39.5'],
-  ['GMoney2458', 2,  'win',  1.5,   'Tulane +8.5'],
-  ['GMoney2458', 3,  'win',  6,     'Under 54'],
-  ['GMoney2458', 4,  'win',  18.5,  'Miami -16.5'],
-  ['GMoney2458', 5,  'win',  30.5,  'Tulane -4.5'],
-  ['GMoney2458', 6,  'loss', -14.5, 'Cocks +9.5'],
-  ['GMoney2458', 7,  'win',  14.5,  'Clemson -20.5'],
-  ['GMoney2458', 8,  'win',  13.5,  'Over 49.5'],
-  ['GMoney2458', 9,  'win',  8.5,   'PSU -6.5'],
-  ['GMoney2458', 10, 'loss', -22,   'Clemson -10'],
-  ['GMoney2458', 11, 'loss', -19.5, 'Georgia -1.5'],
-  ['GMoney2458', 12, 'win',  27.5,  'Tulane -7.5'],
-  ['GMoney2458', 13, 'loss', -0.5,  'Under 52.5'],
-  ['GMoney2458', 14, 'loss', -5.5,  'TAMU +4.5'],
+  ['G_Money24', 1,  'loss', -0.5,  'Under 39.5'],
+  ['G_Money24', 2,  'win',  1.5,   'Tulane +8.5'],
+  ['G_Money24', 3,  'win',  6,     'Under 54'],
+  ['G_Money24', 4,  'win',  18.5,  'Miami -16.5'],
+  ['G_Money24', 5,  'win',  30.5,  'Tulane -4.5'],
+  ['G_Money24', 6,  'loss', -14.5, 'Cocks +9.5'],
+  ['G_Money24', 7,  'win',  14.5,  'Clemson -20.5'],
+  ['G_Money24', 8,  'win',  13.5,  'Over 49.5'],
+  ['G_Money24', 9,  'win',  8.5,   'PSU -6.5'],
+  ['G_Money24', 10, 'loss', -22,   'Clemson -10'],
+  ['G_Money24', 11, 'loss', -19.5, 'Georgia -1.5'],
+  ['G_Money24', 12, 'win',  27.5,  'Tulane -7.5'],
+  ['G_Money24', 13, 'loss', -0.5,  'Under 52.5'],
+  ['G_Money24', 14, 'loss', -5.5,  'TAMU +4.5'],
 
-  // ── Bitch Macco ───────────────────────────────────────────────────────────
+  // ── Mitch ───────────────────────────────────────────────────────────
   // W1  Troy -8.5:  Troy 26 Nev 28.  diff=(26-28)+(-8.5)=-10.5
   // W2  Maryland -9.5: Md 24 MSU 27. diff=(24-27)+(-9.5)=-12.5
   // W3  SC +6:      SC 33 LSU 36.    diff=(33-36)+6=+3
@@ -371,17 +371,17 @@ const DATA = [
   // W12 WVU: no spread listed — skipped
   // W13 UCONN +10.5: Syr 31 UConn 24. diff=(24-31)+10.5=+3.5
   // W14 BC -3.5:    BC 34 Pitt 23.  diff=(34-23)+(-3.5)=+7.5
-  ['Bitch Macco', 1,  'loss', -10.5, 'Troy -8.5'],
-  ['Bitch Macco', 2,  'loss', -12.5, 'Maryland -9.5'],
-  ['Bitch Macco', 3,  'win',  3,     'SC +6'],
-  ['Bitch Macco', 4,  'win',  16.5,  'Army -6.5'],
-  ['Bitch Macco', 5,  'loss', -0.5,  'Louisville +6.5'],
-  ['Bitch Macco', 7,  'loss', -1.5,  'Over 55.5'],
-  ['Bitch Macco', 8,  'win',  29.5,  'Florida +1.5'],
-  ['Bitch Macco', 10, 'win',  29.5,  'Iowa -2.5'],
-  ['Bitch Macco', 11, 'win',  13.5,  'Duke +3.5'],
-  ['Bitch Macco', 13, 'win',  3.5,   'UCONN +10.5'],
-  ['Bitch Macco', 14, 'win',  7.5,   'BC -3.5'],
+  ['Mitch', 1,  'loss', -10.5, 'Troy -8.5'],
+  ['Mitch', 2,  'loss', -12.5, 'Maryland -9.5'],
+  ['Mitch', 3,  'win',  3,     'SC +6'],
+  ['Mitch', 4,  'win',  16.5,  'Army -6.5'],
+  ['Mitch', 5,  'loss', -0.5,  'Louisville +6.5'],
+  ['Mitch', 7,  'loss', -1.5,  'Over 55.5'],
+  ['Mitch', 8,  'win',  29.5,  'Florida +1.5'],
+  ['Mitch', 10, 'win',  29.5,  'Iowa -2.5'],
+  ['Mitch', 11, 'win',  13.5,  'Duke +3.5'],
+  ['Mitch', 13, 'win',  3.5,   'UCONN +10.5'],
+  ['Mitch', 14, 'win',  7.5,   'BC -3.5'],
 
   // ── SammyBigBeans (Steve Barker) ──────────────────────────────────────────
   // W1  Miami (OH) +2.5: NU 13 MiamiOH 6. diff=(6-13)+2.5=-4.5
@@ -413,7 +413,7 @@ const DATA = [
   ['SammyBigBeans', 13, 'win',  2.5,   'UK +19.5'],
   ['SammyBigBeans', 14, 'loss', -14.5, 'Oklahoma +5.5'],
 
-  // ── Glennjamin (Glenn Grasha) ─────────────────────────────────────────────
+  // ── glenngrasha (Glenn Grasha) ─────────────────────────────────────────────
   // W1  Kent +24:   Pitt 55 Kent 24.  diff=(24-55)+24=-7
   // W2  Washington -24.5: Wash 30 EMU 9. diff=(30-9)+(-24.5)=-3.5
   // W3  Texas -35:  Texas 56 UTSA 7. diff=(56-7)+(-35)=+14
@@ -428,28 +428,28 @@ const DATA = [
   // W12 Oregon -13.5: Wisc 13 Oregon 16. diff=(16-13)+(-13.5)=-10.5
   // W13 USC -4.5:   UCLA 13 USC 19.  diff=(19-13)+(-4.5)=+1.5
   // W14 IU -29:     IU 66 Purdue 0.  diff=(66-0)+(-29)=+37
-  ['Glennjamin', 1,  'loss', -7,    'Kent +24'],
-  ['Glennjamin', 2,  'loss', -3.5,  'Washington -24.5'],
-  ['Glennjamin', 3,  'win',  14,    'Texas -35'],
-  ['Glennjamin', 4,  'win',  17,    'BGSU +23'],
-  ['Glennjamin', 5,  'win',  2.5,   'USC -14.5'],
-  ['Glennjamin', 6,  'win',  3.5,   'Indiana -13.5'],
-  ['Glennjamin', 7,  'win',  9,     'Iowa St -3'],
-  ['Glennjamin', 8,  'win',  24,    'K State -3'],
-  ['Glennjamin', 9,  'loss', -6.5,  'Illinois +22.5'],
-  ['Glennjamin', 10, 'loss', -27,   'A&M -3'],
-  ['Glennjamin', 11, 'loss', -14.5, 'Miami -9.5'],
-  ['Glennjamin', 12, 'loss', -10.5, 'Oregon -13.5'],
-  ['Glennjamin', 13, 'win',  1.5,   'USC -4.5'],
-  ['Glennjamin', 14, 'win',  37,    'IU -29'],
+  ['glenngrasha', 1,  'loss', -7,    'Kent +24'],
+  ['glenngrasha', 2,  'loss', -3.5,  'Washington -24.5'],
+  ['glenngrasha', 3,  'win',  14,    'Texas -35'],
+  ['glenngrasha', 4,  'win',  17,    'BGSU +23'],
+  ['glenngrasha', 5,  'win',  2.5,   'USC -14.5'],
+  ['glenngrasha', 6,  'win',  3.5,   'Indiana -13.5'],
+  ['glenngrasha', 7,  'win',  9,     'Iowa St -3'],
+  ['glenngrasha', 8,  'win',  24,    'K State -3'],
+  ['glenngrasha', 9,  'loss', -6.5,  'Illinois +22.5'],
+  ['glenngrasha', 10, 'loss', -27,   'A&M -3'],
+  ['glenngrasha', 11, 'loss', -14.5, 'Miami -9.5'],
+  ['glenngrasha', 12, 'loss', -10.5, 'Oregon -13.5'],
+  ['glenngrasha', 13, 'win',  1.5,   'USC -4.5'],
+  ['glenngrasha', 14, 'win',  37,    'IU -29'],
 
-  // ── Jon ───────────────────────────────────────────────────────────────────
+  // ── jungerman ───────────────────────────────────────────────────────────────────
   // W12 Boise St -14.5: SJSU 21 Boise 42 (away). diff=(42-21)+(-14.5)=+6.5
   // W13 CU -2.5:    Kansas 37 Colo 21 (away). diff=(21-37)+(-2.5)=-18.5
   // W14 UNLV -17.5: UNLV 38 Nev 14.  diff=(38-14)+(-17.5)=+6.5
-  ['Jon', 12, 'win',  6.5,   'Boise St -14.5'],
-  ['Jon', 13, 'loss', -18.5, 'CU -2.5'],
-  ['Jon', 14, 'win',  6.5,   'UNLV -17.5'],
+  ['jungerman', 12, 'win',  6.5,   'Boise St -14.5'],
+  ['jungerman', 13, 'loss', -18.5, 'CU -2.5'],
+  ['jungerman', 14, 'win',  6.5,   'UNLV -17.5'],
 ];
 
 const insert = db.prepare(`
@@ -601,15 +601,15 @@ const TOTALS_GAME_LINKS = [
   // Tim W7: Over 44.5 — Kentucky vs Vanderbilt
   { displayName: 'Boxmaster69420', weekNumber: 7, teams: ['Kentucky', 'Vanderbilt'] },
   // Grant W1: Under 39.5 — Iowa vs Illinois State
-  { displayName: 'GMoney2458', weekNumber: 1, teams: ['Iowa', 'Illinois State'] },
+  { displayName: 'G_Money24', weekNumber: 1, teams: ['Iowa', 'Illinois State'] },
   // Grant W3: Under 54 — Boston College vs Missouri
-  { displayName: 'GMoney2458', weekNumber: 3, teams: ['Boston College', 'Missouri'] },
+  { displayName: 'G_Money24', weekNumber: 3, teams: ['Boston College', 'Missouri'] },
   // Grant W8: Over 49.5 — Indiana vs Nebraska
-  { displayName: 'GMoney2458', weekNumber: 8, teams: ['Indiana', 'Nebraska'] },
+  { displayName: 'G_Money24', weekNumber: 8, teams: ['Indiana', 'Nebraska'] },
   // Grant W13: Under 52.5 — Ohio State vs Indiana (IUOSU)
-  { displayName: 'GMoney2458', weekNumber: 13, teams: ['Ohio State', 'Indiana'] },
+  { displayName: 'G_Money24', weekNumber: 13, teams: ['Ohio State', 'Indiana'] },
   // Mitch W7: Over 55.5 — Army vs UAB
-  { displayName: 'Bitch Macco', weekNumber: 7, teams: ['Army', 'UAB'] },
+  { displayName: 'Mitch', weekNumber: 7, teams: ['Army', 'UAB'] },
 ];
 
 const getPickId = db.prepare('SELECT id FROM historical_picks WHERE season=2024 AND week_number=? AND display_name=?');
