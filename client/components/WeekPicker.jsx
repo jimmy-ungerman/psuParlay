@@ -374,6 +374,9 @@ export default function WeekPicker() {
                   {isMyGame && myPick.picked_team === 'home' && (
                     <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
                   )}
+                  {game.home_rank && (
+                    <span className="text-xs text-gray-500 font-semibold">#{game.home_rank}</span>
+                  )}
                   <span className="font-medium text-white">{game.home_team}</span>
                   <span className="text-xs text-gray-500">HOME</span>
                 </div>
@@ -395,6 +398,9 @@ export default function WeekPicker() {
                 <div className="flex items-center gap-2">
                   {isMyGame && myPick.picked_team === 'away' && (
                     <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                  )}
+                  {game.away_rank && (
+                    <span className="text-xs text-gray-500 font-semibold">#{game.away_rank}</span>
                   )}
                   <span className="font-medium text-white">{game.away_team}</span>
                   <span className="text-xs text-gray-500">AWAY</span>

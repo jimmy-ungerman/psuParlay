@@ -70,6 +70,16 @@ async function ensureGamesSeeded() {
     );
   }
 
+  // Backfill AP rank for any existing games that are missing it (e.g. a team was
+  // unranked when first seeded but the poll has since updated)
+  const needsRank = events.filter(e => existingIds.has(e.espnId) && (e.homeRank || e.awayRank));
+  for (const e of needsRank) {
+    await pool.query(
+      `UPDATE games SET home_rank = $1, away_rank = $2 WHERE espn_id = $3 AND home_rank IS NULL AND away_rank IS NULL`,
+      [e.homeRank, e.awayRank, e.espnId]
+    );
+  }
+
   if (newEvents.length === 0) return { season, week };
 
   if (isMockMode()) {
@@ -86,11 +96,12 @@ async function seedWithMockSpreads(events, week, season) {
     const spread = generateMockSpread();
     const total = generateMockTotal();
     const { rows: inserted } = await pool.query(
-      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, total, commence_time, week_number, season, status, conference)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, total, commence_time, week_number, season, status, conference, home_rank, away_rank)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        ON CONFLICT (espn_id) DO UPDATE SET conference = excluded.conference WHERE games.conference IS NULL RETURNING id`,
       [event.espnId, event.homeTeam, event.awayTeam, event.homeAbbr, event.awayAbbr,
-       spread, total, event.commenceTime, week, season, event.status, event.conference]
+       spread, total, event.commenceTime, week, season, event.status, event.conference,
+       event.homeRank, event.awayRank]
     );
   }
 }
@@ -116,11 +127,12 @@ async function seedWithRealOdds(events, week, season) {
     const total = oddsGame.total ?? null;
 
     const { rows: inserted } = await pool.query(
-      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, total, commence_time, week_number, season, status, conference)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, total, commence_time, week_number, season, status, conference, home_rank, away_rank)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        ON CONFLICT (espn_id) DO UPDATE SET conference = excluded.conference WHERE games.conference IS NULL RETURNING id`,
       [event.espnId, event.homeTeam, event.awayTeam, event.homeAbbr, event.awayAbbr,
-       spread, total, event.commenceTime, week, season, event.status, event.conference]
+       spread, total, event.commenceTime, week, season, event.status, event.conference,
+       event.homeRank, event.awayRank]
     );
   }
 }

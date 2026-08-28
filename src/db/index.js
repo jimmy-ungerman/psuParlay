@@ -40,6 +40,12 @@ export async function initDb() {
   if (!cols.some(c => c.name === 'total')) {
     db.exec(`ALTER TABLE games ADD COLUMN total REAL`);
   }
+  if (!cols.some(c => c.name === 'home_rank')) {
+    db.exec(`ALTER TABLE games ADD COLUMN home_rank INTEGER`);
+  }
+  if (!cols.some(c => c.name === 'away_rank')) {
+    db.exec(`ALTER TABLE games ADD COLUMN away_rank INTEGER`);
+  }
 
   // Migration: pick trash talk note
   const pickCols = db.prepare(`PRAGMA table_info(picks)`).all();
