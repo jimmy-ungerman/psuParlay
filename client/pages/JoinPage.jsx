@@ -34,91 +34,85 @@ export default function JoinPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center px-5">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🏈</div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">PSU Parlay</h1>
-          <p className="text-gray-400 mt-1 text-sm">College football spread parlay with your crew</p>
+        <div className="mb-7">
+          <p className="eyebrow mb-2">College football · against the spread</p>
+          <h1 className="font-display font-extrabold text-4xl tracking-tight text-chalk">
+            psu<span className="text-chalk-dim">Parlay</span>
+          </h1>
         </div>
 
-        <div className="bg-gray-900 rounded-2xl p-6 shadow-xl border border-gray-800">
-          {/* Mode Toggle */}
-          <div className="flex rounded-lg bg-gray-800 p-1 mb-6">
-            <button
-              type="button"
-              onClick={() => setMode('join')}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
-                mode === 'join' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Join Room
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('create')}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
-                mode === 'create' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Create Room
-            </button>
+        <div className="card p-6">
+          <div className="flex rounded-lg bg-navy-sink p-1 mb-6">
+            {[
+              { k: 'join', label: 'Join a room' },
+              { k: 'create', label: 'Create one' },
+            ].map(({ k, label }) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setMode(k)}
+                className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${
+                  mode === k ? 'bg-cash text-navy' : 'text-chalk-dim hover:text-chalk'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {mode === 'join' && (
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">Room Code</label>
+                <label className="eyebrow block mb-1.5" htmlFor="room-code">Room code</label>
                 <input
+                  id="room-code"
                   type="text"
                   value={roomCode}
                   onChange={e => setRoomCode(e.target.value.toUpperCase())}
                   placeholder="ABC123"
                   maxLength={6}
                   required
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white text-lg font-mono tracking-widest placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="field font-mono text-lg tracking-[0.35em]"
                 />
               </div>
             )}
 
             {mode === 'create' && (
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">Room Name</label>
+                <label className="eyebrow block mb-1.5" htmlFor="room-name">Room name</label>
                 <input
+                  id="room-name"
                   type="text"
                   value={roomName}
                   onChange={e => setRoomName(e.target.value)}
                   placeholder="Saturday Crew"
                   maxLength={100}
                   required
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="field"
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">Your Name</label>
+              <label className="eyebrow block mb-1.5" htmlFor="display-name">Your name</label>
               <input
+                id="display-name"
                 type="text"
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
                 placeholder="Enter your name"
                 maxLength={50}
                 required
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="field"
               />
             </div>
 
-            {error && (
-              <p className="text-red-400 text-sm bg-red-400/10 rounded-lg px-3 py-2">{error}</p>
-            )}
+            {error && <p className="banner banner-error">{error}</p>}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-colors"
-            >
-              {loading ? 'Loading...' : mode === 'join' ? 'Join Room' : 'Create Room'}
+            <button type="submit" disabled={loading} className="btn btn-primary w-full">
+              {loading ? 'Loading…' : mode === 'join' ? 'Join room' : 'Create room'}
             </button>
           </form>
         </div>

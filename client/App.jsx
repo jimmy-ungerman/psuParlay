@@ -6,7 +6,7 @@ import HomePage from './pages/HomePage.jsx';
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-chalk-faint">Loading…</div>;
   return user ? children : <Navigate to="/login" replace />;
 }
 

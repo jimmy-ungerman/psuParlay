@@ -58,26 +58,25 @@ export default function AdminPanel() {
   const used = invites.filter(i => i.used_by);
 
   return (
-    <div className="p-4 space-y-6">
-      {/* User roles */}
+    <div className="p-4 flex flex-col gap-6">
       <div>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">User Roles</h2>
+        <p className="eyebrow mb-3">User roles</p>
         {loading ? (
-          <p className="text-gray-500 text-sm">Loading...</p>
+          <p className="text-chalk-faint text-sm">Loading…</p>
         ) : (
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             {users.filter(u => !u.is_admin).map(u => (
-              <div key={u.id} className="bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 flex items-center justify-between">
-                <span className="text-sm text-white">{u.username}</span>
+              <div key={u.id} className="card px-3 py-2.5 flex items-center justify-between">
+                <span className="text-sm text-chalk">{u.username}</span>
                 <button
                   onClick={() => toggleLinkAdmin(u)}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
                     u.is_link_admin
-                      ? 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30'
-                      : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                      ? 'bg-cash/20 text-cash hover:bg-cash/30'
+                      : 'bg-navy-sink text-chalk-dim hover:text-chalk'
                   }`}
                 >
-                  {u.is_link_admin ? 'Link Admin ✓' : 'Link Admin'}
+                  {u.is_link_admin ? 'Link admin ✓' : 'Link admin'}
                 </button>
               </div>
             ))}
@@ -86,7 +85,7 @@ export default function AdminPanel() {
       </div>
 
       <div>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Generate Invite</h2>
+        <p className="eyebrow mb-3">Generate invite</p>
         <form onSubmit={createInvite} className="flex gap-2">
           <input
             type="text"
@@ -94,43 +93,38 @@ export default function AdminPanel() {
             onChange={e => setLabel(e.target.value)}
             placeholder="Label (e.g. Mike)"
             maxLength={100}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500"
+            className="field !py-2.5 text-sm"
           />
-          <button
-            type="submit"
-            disabled={creating}
-            className="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors flex-shrink-0"
-          >
-            {creating ? '...' : 'Create'}
+          <button type="submit" disabled={creating} className="btn btn-primary flex-shrink-0">
+            {creating ? '…' : 'Create'}
           </button>
         </form>
       </div>
 
       {loading ? (
-        <p className="text-gray-500 text-sm">Loading invites...</p>
+        <p className="text-chalk-faint text-sm">Loading invites…</p>
       ) : (
         <>
-          {/* Pending invites */}
-          {pending.length > 0 && (
+          {pending.length > 0 ? (
             <div>
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pending ({pending.length})</h3>
-              <div className="space-y-2">
+              <p className="eyebrow mb-2">Pending ({pending.length})</p>
+              <div className="flex flex-col gap-2">
                 {pending.map(invite => (
-                  <div key={invite.id} className="bg-gray-900 border border-gray-800 rounded-xl p-3 flex items-center justify-between gap-3">
+                  <div key={invite.id} className="card p-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-white text-sm font-medium truncate">{invite.label || 'Unlabeled'}</p>
-                      <p className="text-gray-600 text-xs font-mono truncate">{`${appBase}/invite/${invite.token}`}</p>
+                      <p className="text-chalk text-sm font-medium truncate">{invite.label || 'Unlabeled'}</p>
+                      <p className="text-chalk-faint text-xs font-mono truncate">{`${appBase}/invite/${invite.token}`}</p>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
                       <button
                         onClick={() => copyLink(invite.token, invite.id)}
-                        className="text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 px-3 py-1.5 rounded-lg transition-colors font-medium"
+                        className="text-xs bg-cash/20 text-cash hover:bg-cash/30 px-3 py-1.5 rounded-lg transition-colors font-semibold"
                       >
                         {copiedId === invite.id ? 'Copied!' : 'Copy'}
                       </button>
                       <button
                         onClick={() => deleteInvite(invite.id)}
-                        className="text-xs bg-red-600/10 text-red-500 hover:bg-red-600/20 px-3 py-1.5 rounded-lg transition-colors"
+                        className="text-xs bg-bust/10 text-bust hover:bg-bust/20 px-3 py-1.5 rounded-lg transition-colors"
                       >
                         Revoke
                       </button>
@@ -139,24 +133,21 @@ export default function AdminPanel() {
                 ))}
               </div>
             </div>
+          ) : (
+            <p className="text-chalk-faint text-sm">No pending invites.</p>
           )}
 
-          {pending.length === 0 && (
-            <p className="text-gray-600 text-sm">No pending invites.</p>
-          )}
-
-          {/* Used invites */}
           {used.length > 0 && (
             <div>
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Used ({used.length})</h3>
-              <div className="space-y-2">
+              <p className="eyebrow mb-2">Used ({used.length})</p>
+              <div className="flex flex-col gap-2">
                 {used.map(invite => (
-                  <div key={invite.id} className="bg-gray-900/50 border border-gray-800/50 rounded-xl p-3 flex items-center justify-between opacity-60">
+                  <div key={invite.id} className="card p-3 flex items-center justify-between opacity-60">
                     <div>
-                      <p className="text-gray-400 text-sm">{invite.label || 'Unlabeled'}</p>
-                      <p className="text-gray-600 text-xs">Registered as <span className="text-gray-500">{invite.used_by_name}</span></p>
+                      <p className="text-chalk-dim text-sm">{invite.label || 'Unlabeled'}</p>
+                      <p className="text-chalk-faint text-xs">Registered as <span className="text-chalk-dim">{invite.used_by_name}</span></p>
                     </div>
-                    <span className="text-xs bg-green-500/10 text-green-500 px-2 py-1 rounded-full">Used</span>
+                    <span className="streak-chip up">Used</span>
                   </div>
                 ))}
               </div>

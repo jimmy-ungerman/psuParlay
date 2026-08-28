@@ -72,156 +72,147 @@ export default function ConsensusVote() {
     }
   }
 
-  if (loading) {
-    return <div className="p-6 text-center text-gray-500">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="p-6 text-center text-red-400">{error}</div>;
-  }
+  if (loading) return <div className="p-6 text-center text-chalk-faint">Loading…</div>;
+  if (error) return <div className="p-6 text-center text-bust">{error}</div>;
 
   const { game, psuSpread, votes, totalUsers, yesVotes, noVotes, consensusReached, myVote } = data || {};
 
   const gameLocked = game && game.status !== 'scheduled';
   const yesPercent = totalUsers > 0 ? (yesVotes / totalUsers) * 100 : 0;
-  const threshold = 50;
+  const noPercent = totalUsers > 0 ? (noVotes / totalUsers) * 100 : 0;
+  const needed = totalUsers ? Math.ceil(totalUsers / 2 + 0.01) : 0;
+  const toLock = Math.max(0, needed - (yesVotes || 0));
+  const noVoteCount = totalUsers - (yesVotes || 0) - (noVotes || 0);
 
   const psuIsHome = game?.home_team?.includes('Penn State');
   const opponent = game ? (psuIsHome ? game.away_team : game.home_team) : null;
   const location = game ? (psuIsHome ? 'vs' : '@') : null;
 
   return (
-    <div className="p-4 space-y-4">
-      <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
-        Consensus Pick — Week {week}
-      </h2>
+    <div className="p-4 flex flex-col gap-4">
+      <div>
+        <p className="eyebrow mb-1">The Penn State question</p>
+        <h2 className="dateline text-[2.4rem]">Week {week}</h2>
+      </div>
 
-      {/* PSU Game Card */}
-      {game ? (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-500">{formatTime(game.commence_time)}</span>
-            {gameLocked && (
-              <span className="text-xs font-semibold text-yellow-500 uppercase">
-                {game.status === 'complete' ? 'Final' : 'In Progress'}
-              </span>
-            )}
-          </div>
-          <p className="text-white font-semibold text-lg">
-            Penn State {formatSpread(psuSpread)}
-          </p>
-          <p className="text-gray-400 text-sm">{location} {opponent}</p>
-          {game.status === 'complete' && game.home_score !== null && (
-            <p className="text-gray-500 text-xs mt-1">
-              Final: {game.home_team} {game.home_score}–{game.away_score} {game.away_team}
-            </p>
-          )}
+      {!game ? (
+        <div className="card p-6 text-center text-chalk-dim">
+          <p className="dateline text-xl mb-1">No Penn State game</p>
+          <p className="text-sm">Nothing to vote on for Week {week}.</p>
         </div>
       ) : (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 text-center text-gray-600">
-          <p className="text-3xl mb-2">🏈</p>
-          <p>No Penn State game found for Week {week}</p>
-        </div>
-      )}
-
-      {/* Consensus Status */}
-      {game && (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-300">
-              Consensus Status
-            </span>
-            {consensusReached ? (
-              <span className="text-xs font-bold text-green-400 bg-green-500/20 px-2 py-0.5 rounded-full">
-                CONSENSUS REACHED
-              </span>
-            ) : (
-              <span className="text-xs text-gray-500">
-                Need &gt;50% ({Math.ceil(totalUsers / 2 + 0.01)} of {totalUsers})
-              </span>
+        <>
+          {/* The question */}
+          <div className="card p-4">
+            <p className="font-display font-bold text-lg text-chalk mb-2 text-balance">
+              Put Penn State on the slip this week?
+            </p>
+            <p className="font-mono font-semibold text-2xl tracking-tight">
+              Penn State <span className="text-favor">{formatSpread(psuSpread)}</span>
+            </p>
+            <p className="font-mono text-xs text-chalk-faint mt-1">
+              {location} {opponent} · {formatTime(game.commence_time)}
+              {gameLocked && (game.status === 'complete' ? ' · Final' : ' · In progress')}
+            </p>
+            {game.status === 'complete' && game.home_score !== null && (
+              <p className="text-chalk-dim text-xs mt-1">
+                Final: {game.home_team} {game.home_score}–{game.away_score} {game.away_team}
+              </p>
             )}
           </div>
 
-          {/* Progress bar */}
-          <div className="relative h-2 bg-gray-800 rounded-full overflow-hidden">
+          {/* The tally */}
+          <div className="flex flex-col gap-1.5">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${consensusReached ? 'bg-green-500' : 'bg-blue-500'}`}
-              style={{ width: `${Math.min(yesPercent, 100)}%` }}
-            />
-            {/* 50% threshold marker */}
-            <div className="absolute top-0 bottom-0 w-px bg-gray-500" style={{ left: '50%' }} />
+              className="flex h-9 rounded-md overflow-hidden border border-line"
+              role="img"
+              aria-label={`${yesVotes} in favor, ${noVotes} against, ${noVoteCount} not voted`}
+            >
+              <span
+                className="flex items-center px-2.5 bg-cash text-navy font-mono text-xs font-bold tracking-wider"
+                style={{ width: `${Math.max(yesPercent, 14)}%` }}
+              >
+                In {yesVotes}
+              </span>
+              <span
+                className="flex items-center justify-end px-2.5 flex-1 bg-navy-raised text-chalk-dim font-mono text-xs font-bold tracking-wider"
+              >
+                Pass {noVotes}
+              </span>
+            </div>
+            <div className="flex justify-between font-mono text-[0.66rem] tracking-wide text-chalk-faint">
+              <span>{noVoteCount} haven't voted</span>
+              {consensusReached ? (
+                <span className="text-cash">Locked in</span>
+              ) : toLock > 0 ? (
+                <span className="text-favor">{toLock} more to lock it in</span>
+              ) : (
+                <span>Need {needed} of {totalUsers}</span>
+              )}
+            </div>
           </div>
 
-          <div className="flex justify-between text-xs text-gray-500">
-            <span>{yesVotes} yes · {noVotes} no · {totalUsers - yesVotes - noVotes} no vote</span>
-            <span>{Math.round(yesPercent)}%</span>
-          </div>
-
-          {/* Vote buttons */}
-          {!gameLocked && (
-            <div className="flex gap-3 pt-1">
+          {/* Vote */}
+          {!gameLocked ? (
+            <div className="flex gap-2">
               <button
                 onClick={() => handleVote('yes')}
                 disabled={voting}
-                className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-                  myVote === 'yes'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-green-500/20 hover:text-green-400 border border-gray-700'
-                }`}
+                className={`btn flex-1 ${myVote === 'yes' ? 'btn-primary' : 'btn-ghost'}`}
               >
-                {myVote === 'yes' ? '✓ YES — Add PSU' : 'YES — Add PSU'}
+                {myVote === 'yes' ? 'Voted: put it on' : 'Put it on'}
               </button>
               <button
                 onClick={() => handleVote('no')}
                 disabled={voting}
-                className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors ${
+                className={`btn flex-1 ${
                   myVote === 'no'
-                    ? 'bg-red-500 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-red-500/20 hover:text-red-400 border border-gray-700'
+                    ? '!bg-bust !text-navy !border-bust'
+                    : 'btn-ghost'
                 }`}
               >
-                {myVote === 'no' ? '✓ NO — Skip' : 'NO — Skip'}
+                {myVote === 'no' ? 'Voted: pass' : 'Pass'}
               </button>
             </div>
+          ) : (
+            <p className="text-xs text-center text-chalk-faint">Voting locked — the game has started.</p>
           )}
-          {gameLocked && (
-            <p className="text-xs text-center text-gray-600 pt-1">Voting locked — game has started</p>
-          )}
+
+          <p className="text-xs text-chalk-faint text-balance">
+            If it locks, Penn State goes on as a group leg and anyone who picked the Nittany Lions
+            solo gets their pick back to choose again.
+          </p>
+
           {pickCleared && (
-            <p className="text-xs text-yellow-400 bg-yellow-500/10 rounded-lg px-3 py-2 text-center">
-              Your weekly pick was on the PSU game and has been cleared — please choose a new game.
+            <p className="banner banner-warn">
+              Your pick was on the Penn State game and has been cleared. Choose a new game.
             </p>
           )}
           {consensusDropped && (
-            <p className="text-xs text-blue-400 bg-blue-500/10 rounded-lg px-3 py-2 text-center">
-              Consensus dropped below 50% — PSU pick is available again.
+            <p className="banner banner-info">
+              The vote fell back under half — the Penn State pick is open again.
             </p>
           )}
-          {error && <p className="text-xs text-red-400 text-center">{error}</p>}
-        </div>
-      )}
 
-      {/* Vote list */}
-      {game && votes?.length > 0 && (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-          <div className="px-4 py-2 border-b border-gray-800">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Votes</span>
-          </div>
-          <div className="divide-y divide-gray-800">
-            {votes.map(v => (
-              <div key={v.user_id} className="px-4 py-2.5 flex items-center justify-between">
-                <span className="text-sm text-white">{v.username}</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                  v.vote === 'yes'
-                    ? 'bg-green-500/20 text-green-400'
-                    : 'bg-red-500/20 text-red-400'
-                }`}>
-                  {v.vote === 'yes' ? 'YES' : 'NO'}
-                </span>
+          {/* Who voted */}
+          {votes?.length > 0 && (
+            <div className="card overflow-hidden">
+              <div className="px-4 py-2 border-b border-line-soft">
+                <span className="eyebrow">Votes</span>
               </div>
-            ))}
-          </div>
-        </div>
+              <div className="divide-y divide-line-soft">
+                {votes.map(v => (
+                  <div key={v.user_id} className="px-4 py-2.5 flex items-center justify-between">
+                    <span className="text-sm text-chalk">{v.username}</span>
+                    <span className={`streak-chip ${v.vote === 'yes' ? 'up' : 'down'}`}>
+                      {v.vote === 'yes' ? 'IN' : 'PASS'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

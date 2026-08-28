@@ -23,54 +23,53 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center px-5">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🏈</div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">PSU Parlay</h1>
-          <p className="text-gray-500 mt-1 text-sm">Sign in to your account</p>
+        <div className="mb-7">
+          <p className="eyebrow mb-2">College football · against the spread</p>
+          <h1 className="font-display font-extrabold text-4xl tracking-tight text-chalk">
+            psu<span className="text-chalk-dim">Parlay</span>
+          </h1>
         </div>
 
-        <div className="bg-gray-900 rounded-2xl p-6 shadow-xl border border-gray-800">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="card p-6">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">Username</label>
+              <label className="eyebrow block mb-1.5" htmlFor="login-username">Username</label>
               <input
+                id="login-username"
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 placeholder="your_username"
                 required
                 autoComplete="username"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="field font-mono"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">Password</label>
+              <label className="eyebrow block mb-1.5" htmlFor="login-password">Password</label>
               <input
+                id="login-password"
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="field font-mono"
               />
             </div>
 
-            {error && <p className="text-red-400 text-sm bg-red-400/10 rounded-lg px-3 py-2">{error}</p>}
+            {error && <p className="banner banner-error">{error}</p>}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-colors"
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
+            <button type="submit" disabled={loading} className="btn btn-primary w-full">
+              {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-gray-600 text-xs mt-4">
+        <p className="text-center text-chalk-faint text-xs mt-4">
           Need an account? Ask the admin for an invite link.
         </p>
       </div>
