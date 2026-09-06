@@ -3,6 +3,28 @@
 // not the game's current line, which keeps moving until kickoff.
 // spread_at_pick convention: stored from the picked side's perspective, so a
 // home pick of -7 stores -7 and the matching away pick stores +7.
+// Signed cover margin for a pick: how many points it beat its number by.
+// > 0 covered, < 0 missed, 0 push. Same basis as historical_picks.spread_value,
+// so live and historical differentials add up on one scale.
+// Returns null if the game isn't scored yet.
+export function coverMargin(pick, game) {
+  const homeScore = parseInt(game.home_score);
+  const awayScore = parseInt(game.away_score);
+  const line = parseFloat(pick.spread_at_pick);
+  if (Number.isNaN(homeScore) || Number.isNaN(awayScore) || Number.isNaN(line)) return null;
+
+  if (pick.picked_team === 'over' || pick.picked_team === 'under') {
+    const combined = homeScore + awayScore;
+    return pick.picked_team === 'over' ? combined - line : line - combined;
+  }
+
+  // Margin from the picked team's perspective, plus its spread.
+  const pickedMargin = pick.picked_team === 'home'
+    ? homeScore - awayScore
+    : awayScore - homeScore;
+  return pickedMargin + line;
+}
+
 export function calculateResult(pick, game) {
   if (
     game.status !== 'complete' ||
@@ -12,27 +34,10 @@ export function calculateResult(pick, game) {
     return 'pending';
   }
 
-  const homeScore = parseInt(game.home_score);
-  const awayScore = parseInt(game.away_score);
-  const line = parseFloat(pick.spread_at_pick);
-
-  if (pick.picked_team === 'over' || pick.picked_team === 'under') {
-    const combined = homeScore + awayScore;
-    const margin = pick.picked_team === 'over' ? combined - line : line - combined;
-    if (margin > 0) return 'win';
-    if (margin < 0) return 'loss';
-    return 'push';
-  }
-
-  // Margin from the picked team's perspective, plus its spread.
-  // > 0 = covered, < 0 = failed to cover, 0 = push
-  const pickedMargin = pick.picked_team === 'home'
-    ? homeScore - awayScore
-    : awayScore - homeScore;
-  const coverMargin = pickedMargin + line;
-
-  if (coverMargin > 0) return 'win';
-  if (coverMargin < 0) return 'loss';
+  const margin = coverMargin(pick, game);
+  if (margin === null) return 'pending';
+  if (margin > 0) return 'win';
+  if (margin < 0) return 'loss';
   return 'push';
 }
 

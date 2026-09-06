@@ -1,10 +1,36 @@
 import { Router } from 'express';
 import pool from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { coverMargin } from '../services/results.js';
 
 const router = Router();
 
 const CURRENT_SEASON = new Date().getFullYear();
+
+const round1 = (n) => Math.round(n * 10) / 10;
+
+// Sum of cover margins for settled live picks, keyed by `keyExpr` (a column
+// selectable from the picks/users join). Same scale as historical_picks.spread_value.
+async function liveSpreadTotals({ keyExpr, joinUsers = false, whereSql = '', params = [] }) {
+  const { rows } = await pool.query(
+    `SELECT ${keyExpr} AS k, p.picked_team, p.spread_at_pick,
+            g.home_score, g.away_score
+     FROM picks p
+     JOIN games g ON g.id = p.game_id
+     ${joinUsers ? 'JOIN users u ON u.id = p.user_id' : ''}
+     WHERE p.result IN ('win', 'loss', 'push')
+       AND g.status = 'complete'
+       AND g.home_score IS NOT NULL AND g.away_score IS NOT NULL
+       ${whereSql}`,
+    params
+  );
+  const totals = {};
+  for (const r of rows) {
+    const m = coverMargin(r, r);
+    if (m !== null) totals[r.k] = (totals[r.k] || 0) + m;
+  }
+  return totals;
+}
 
 // GET /api/leaderboard?season=  (season can be a year or 'all')
 router.get('/', requireAuth, async (req, res) => {
@@ -66,10 +92,18 @@ router.get('/', requireAuth, async (req, res) => {
           };
         }
       }
+
+      // Add the differential from settled live picks (every such user is already
+      // in the map via liveRows' LEFT JOIN on users).
+      const liveSpreadByName = await liveSpreadTotals({ keyExpr: 'u.username', joinUsers: true });
+      for (const [name, total] of Object.entries(liveSpreadByName)) {
+        if (map[name]) map[name].spread_total += total;
+      }
+
       leaderboard = Object.values(map)
         .filter(e => e.wins + e.losses + e.pushes > 0)
         .sort((a, b) => b.wins - a.wins || a.losses - b.losses)
-        .map(e => ({ ...e, streak: null, pending: 0 }));
+        .map(e => ({ ...e, spread_total: round1(e.spread_total), streak: null, pending: 0 }));
 
     } else if (parseInt(seasonParam) < CURRENT_SEASON) {
       // Historical season
@@ -92,7 +126,7 @@ router.get('/', requireAuth, async (req, res) => {
         losses: parseInt(r.losses) || 0,
         pushes: parseInt(r.pushes) || 0,
         pending: 0,
-        spread_total: parseFloat(r.spread_total) || 0,
+        spread_total: round1(parseFloat(r.spread_total) || 0),
         streak: null,
       }));
 
@@ -125,13 +159,19 @@ router.get('/', requireAuth, async (req, res) => {
         picksByUser[p.user_id].push(p.result);
       }
 
+      const spreadByUser = await liveSpreadTotals({
+        keyExpr: 'p.user_id',
+        whereSql: 'AND p.season = $1',
+        params: [season],
+      });
+
       leaderboard = rows.map(row => ({
         ...row,
         wins: parseInt(row.wins) || 0,
         losses: parseInt(row.losses) || 0,
         pushes: parseInt(row.pushes) || 0,
         pending: parseInt(row.pending) || 0,
-        spread_total: null,
+        spread_total: spreadByUser[row.id] !== undefined ? round1(spreadByUser[row.id]) : null,
         streak: computeStreak(picksByUser[row.id] || []),
       }));
     }
