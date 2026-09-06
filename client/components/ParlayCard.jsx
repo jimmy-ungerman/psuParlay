@@ -34,18 +34,17 @@ function getConsensusResult(game, psuSpread) {
 
 // One printed line on the slip: name + line up top, and the matchup underneath —
 // the opponent and kickoff before the game, the score once it's on.
-function Leg({ who, bet, result, gameStatus, detail, killed }) {
+function Leg({ who, bet, result, gameStatus, detail }) {
   const live = result === 'pending' && gameStatus === 'in_progress';
 
   let mark = null;
-  if (killed) mark = <span className="stamp-mini">Busted</span>;
-  else if (result === 'win') mark = <span className="mark w">W</span>;
+  if (result === 'win') mark = <span className="mark w">W</span>;
   else if (result === 'loss') mark = <span className="mark l">L</span>;
   else if (result === 'push') mark = <span className="mark">P</span>;
   else if (live) mark = <span className="mark live"><span className="dot pulse-dot" />Live</span>;
 
   return (
-    <div className={`leg${killed ? ' killed' : ''}`}>
+    <div className="leg">
       <span className="lede">
         <span className="who">{who}</span>
         <span className="bet">{bet}</span>
@@ -184,9 +183,7 @@ export default function ParlayCard() {
   else if (parlayResult === 'loss') verdict = { cls: 'dead', label: 'Busted' };
   else verdict = { cls: 'dead', label: 'Push' };
 
-  // The first losing leg is the one that ended it.
-  const firstLossIndex = allLegs.findIndex(l => l.result === 'loss');
-
+  const busted = parlayResult === 'loss';
   const allSettled = legCount > 0 && pending === 0;
 
   return (
@@ -208,6 +205,9 @@ export default function ParlayCard() {
         </div>
       ) : (
         <div className="slip">
+          {busted && (
+            <div className="slip-stamp"><span>Busted</span></div>
+          )}
           <div className="slip-head">
             <span className="t">PSU PARLAY</span>
             <span className="meta">
@@ -218,11 +218,15 @@ export default function ParlayCard() {
           </div>
 
           <div className="slip-verdict">
-            <span className={`chip ${verdict.cls}`}>
-              {verdict.dot && <span className="dot pulse-dot" />}
-              {verdict.label}
-            </span>
-            <span className="sep">·</span>
+            {!busted && (
+              <>
+                <span className={`chip ${verdict.cls}`}>
+                  {verdict.dot && <span className="dot pulse-dot" />}
+                  {verdict.label}
+                </span>
+                <span className="sep">·</span>
+              </>
+            )}
             <span className="cov">
               {wins} of {legCount} covered
               {pending > 0 && ` · ${pending} to play`}
@@ -230,7 +234,7 @@ export default function ParlayCard() {
           </div>
 
           <div className="legs">
-            {allLegs.map((leg, i) => {
+            {allLegs.map((leg) => {
               if (leg._consensus) {
                 const g = leg.game;
                 const psuIsHome = g?.home_team?.includes('Penn State');
@@ -242,7 +246,6 @@ export default function ParlayCard() {
                     result={leg.result}
                     gameStatus={g?.status}
                     detail={legDetail(g, psuIsHome ? 'home' : 'away', false)}
-                    killed={i === firstLossIndex}
                   />
                 );
               }
@@ -261,7 +264,6 @@ export default function ParlayCard() {
                   result={leg.result}
                   gameStatus={leg.game_status}
                   detail={legDetail(leg, isTotal ? null : leg.picked_team, isTotal)}
-                  killed={i === firstLossIndex}
                 />
               );
             })}

@@ -615,34 +615,30 @@
   .leg .score .q {
     color: var(--color-live-ink);
   }
-  .leg.killed {
-    margin: 0 -0.45rem;
-    padding: 0.5rem 0.45rem;
-    border-radius: 3px;
-    border-bottom-color: transparent;
-    background: color-mix(in srgb, var(--color-bust) 9%, transparent);
+  /* Parlay verdict, stamped across the whole slip when it's dead. */
+  .slip-stamp {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
   }
-  .leg.killed .who {
-    color: var(--color-bust-ink);
-  }
-  .leg.killed .mark {
-    grid-row: 1 / span 2;
-    align-self: center;
-  }
-  .stamp-mini {
-    display: inline-block;
-    padding: 0.12em 0.3em;
-    border: 1.6px solid var(--color-bust-ink);
-    border-radius: 3px;
-    transform: rotate(-6deg);
-    opacity: 0.85;
+  .slip-stamp span {
+    padding: 0.06em 0.3em;
+    border: 3px solid var(--color-bust-ink);
+    border-radius: 10px;
+    transform: rotate(-11deg);
+    opacity: 0.4;
     white-space: nowrap;
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 0.78rem;
-    letter-spacing: 0.13em;
+    font-size: clamp(2.2rem, 11vw, 4.25rem);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     color: transparent;
-    -webkit-text-stroke: 1.4px var(--color-bust-ink);
+    -webkit-text-stroke: 3px var(--color-bust-ink);
   }
   .slip-foot {
     display: flex;
@@ -683,7 +679,7 @@
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    .stamp-mini {
+    .slip-stamp span {
       animation: slip-thunk 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both 0.12s;
     }
     .pulse-dot {
@@ -693,15 +689,15 @@
   @keyframes slip-thunk {
     0% {
       opacity: 0;
-      transform: rotate(-6deg) scale(1.7);
+      transform: rotate(-11deg) scale(1.7);
     }
     55% {
-      opacity: 0.95;
-      transform: rotate(-6deg) scale(0.92);
+      opacity: 0.5;
+      transform: rotate(-11deg) scale(0.93);
     }
     100% {
-      opacity: 0.85;
-      transform: rotate(-6deg) scale(1);
+      opacity: 0.4;
+      transform: rotate(-11deg) scale(1);
     }
   }
   @keyframes slip-blip {
