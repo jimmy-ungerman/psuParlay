@@ -20,6 +20,7 @@ export const api = {
   logout: () => request('POST', '/auth/logout'),
   register: (username, password, inviteToken) =>
     request('POST', '/auth/register', { username, password, inviteToken }),
+  changePassword: (newPassword) => request('POST', '/auth/change-password', { newPassword }),
 
   // Invites (admin)
   getInvites: () => request('GET', '/invites'),
@@ -62,6 +63,9 @@ export const api = {
 
   // User management (admin)
   setLinkAdmin: (userId, enabled) => request('PATCH', `/users/${userId}/link-admin`, { enabled }),
+  createUser: (username, tempPassword) => request('POST', '/users', { username, tempPassword }),
+  resetUserPassword: (userId, tempPassword) =>
+    request('POST', `/users/${userId}/reset-password`, { tempPassword }),
 
   // Parlay link
   getParlayLink: (week, season) => {

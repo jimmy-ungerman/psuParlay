@@ -4,7 +4,13 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-prod';
 
 export function signToken(user) {
   return jwt.sign(
-    { userId: user.id, username: user.username, isAdmin: !!user.is_admin, isLinkAdmin: !!user.is_link_admin },
+    {
+      userId: user.id,
+      username: user.username,
+      isAdmin: !!user.is_admin,
+      isLinkAdmin: !!user.is_link_admin,
+      mustChangePassword: !!user.must_change_password,
+    },
     JWT_SECRET,
     { expiresIn: '7d' }
   );

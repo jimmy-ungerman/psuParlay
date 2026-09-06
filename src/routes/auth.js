@@ -8,9 +8,20 @@ const router = Router();
 // GET /api/auth/me — returns current user from cookie session.
 // Shape it exactly like /login and /register (id, not the token's userId) so the
 // client sees a consistent user object whether it just logged in or refreshed.
-router.get('/me', requireAuth, (req, res) => {
+// must_change_password is read live from the DB so an admin reset takes effect
+// on the next page load and a completed change clears even with a stale token.
+router.get('/me', requireAuth, async (req, res) => {
   const { userId, username, isAdmin, isLinkAdmin } = req.user;
-  res.json({ user: { id: userId, username, isAdmin, isLinkAdmin } });
+  try {
+    const { rows } = await pool.query('SELECT must_change_password FROM users WHERE id = $1', [userId]);
+    if (rows.length === 0) return res.status(401).json({ error: 'Not authenticated' });
+    res.json({
+      user: { id: userId, username, isAdmin, isLinkAdmin, mustChangePassword: !!rows[0].must_change_password },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // POST /api/auth/login
@@ -26,7 +37,51 @@ router.post('/login', async (req, res) => {
     }
 
     setAuthCookie(res, signToken(user));
-    res.json({ user: { id: user.id, username: user.username, isAdmin: !!user.is_admin, isLinkAdmin: !!user.is_link_admin } });
+    res.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        isAdmin: !!user.is_admin,
+        isLinkAdmin: !!user.is_link_admin,
+        mustChangePassword: !!user.must_change_password,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/auth/change-password — set a new password.
+// Only usable while must_change_password is set (a manually-created account or an
+// admin-reset account logging in with its temporary password for the first time).
+router.post('/change-password', requireAuth, async (req, res) => {
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  }
+
+  try {
+    const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [req.user.userId]);
+    const user = rows[0];
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    if (!user.must_change_password) {
+      return res.status(403).json({ error: 'Password change is not required for this account' });
+    }
+
+    if (await bcrypt.compare(newPassword, user.password_hash)) {
+      return res.status(400).json({ error: 'Pick a password different from the temporary one' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    const { rows: updated } = await pool.query(
+      'UPDATE users SET password_hash = $1, must_change_password = 0 WHERE id = $2 RETURNING *',
+      [passwordHash, user.id]
+    );
+
+    setAuthCookie(res, signToken(updated[0]));
+    res.json({ ok: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -82,7 +137,15 @@ router.post('/register', async (req, res) => {
     }
 
     setAuthCookie(res, signToken(user));
-    res.status(201).json({ user: { id: user.id, username: user.username, isAdmin: !!user.is_admin, isLinkAdmin: !!user.is_link_admin } });
+    res.status(201).json({
+      user: {
+        id: user.id,
+        username: user.username,
+        isAdmin: !!user.is_admin,
+        isLinkAdmin: !!user.is_link_admin,
+        mustChangePassword: !!user.must_change_password,
+      },
+    });
   } catch (err) {
     if (err.message?.includes('UNIQUE constraint failed')) return res.status(409).json({ error: 'Username already taken' });
     console.error(err);
