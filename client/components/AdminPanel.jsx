@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/index.js';
 
+function generateTempPassword() {
+  const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
+  let s = '';
+  for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return `psu-${s}`;
+}
+
 export default function AdminPanel() {
   const [invites, setInvites] = useState([]);
   const [users, setUsers] = useState([]);
@@ -8,6 +15,14 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+
+  const [newUsername, setNewUsername] = useState('');
+  const [newTempPw, setNewTempPw] = useState(generateTempPassword());
+  const [addingUser, setAddingUser] = useState(false);
+  const [pwError, setPwError] = useState('');
+  // { userId, username, tempPassword } — the last temp password to hand off
+  const [pwResult, setPwResult] = useState(null);
+  const [resettingId, setResettingId] = useState(null);
 
   const appBase = window.location.origin;
 
@@ -48,8 +63,43 @@ export default function AdminPanel() {
     await load();
   }
 
-  function copyLink(token, id) {
-    navigator.clipboard.writeText(`${appBase}/invite/${token}`);
+  async function addUser(e) {
+    e.preventDefault();
+    setPwError('');
+    setPwResult(null);
+    setAddingUser(true);
+    try {
+      const { user } = await api.createUser(newUsername.trim(), newTempPw);
+      setPwResult({ userId: user.id, username: user.username, tempPassword: newTempPw });
+      setNewUsername('');
+      setNewTempPw(generateTempPassword());
+      await load();
+    } catch (err) {
+      setPwError(err.message);
+    } finally {
+      setAddingUser(false);
+    }
+  }
+
+  async function resetPassword(user) {
+    if (!confirm(`Reset ${user.username}'s password? Their current password stops working immediately.`)) return;
+    setPwError('');
+    setPwResult(null);
+    setResettingId(user.id);
+    try {
+      const tempPassword = generateTempPassword();
+      await api.resetUserPassword(user.id, tempPassword);
+      setPwResult({ userId: user.id, username: user.username, tempPassword });
+      await load();
+    } catch (err) {
+      setPwError(err.message);
+    } finally {
+      setResettingId(null);
+    }
+  }
+
+  function copyText(text, id) {
+    navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   }
@@ -66,20 +116,89 @@ export default function AdminPanel() {
         ) : (
           <div className="flex flex-col gap-2">
             {users.filter(u => !u.is_admin).map(u => (
-              <div key={u.id} className="card px-3 py-2.5 flex items-center justify-between">
-                <span className="text-sm text-chalk">{u.username}</span>
-                <button
-                  onClick={() => toggleLinkAdmin(u)}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                    u.is_link_admin
-                      ? 'bg-cash/20 text-cash hover:bg-cash/30'
-                      : 'bg-navy-sink text-chalk-dim hover:text-chalk'
-                  }`}
-                >
-                  {u.is_link_admin ? 'Link admin ✓' : 'Link admin'}
-                </button>
+              <div key={u.id} className="card px-3 py-2.5 flex items-center justify-between gap-2">
+                <span className="text-sm text-chalk flex items-center gap-2 min-w-0">
+                  <span className="truncate">{u.username}</span>
+                  {!!u.must_change_password && (
+                    <span className="streak-chip down flex-shrink-0">temp pw</span>
+                  )}
+                </span>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => resetPassword(u)}
+                    disabled={resettingId === u.id}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-navy-sink text-chalk-dim hover:text-chalk transition-colors disabled:opacity-50"
+                  >
+                    {resettingId === u.id ? '…' : 'Reset pw'}
+                  </button>
+                  <button
+                    onClick={() => toggleLinkAdmin(u)}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                      u.is_link_admin
+                        ? 'bg-cash/20 text-cash hover:bg-cash/30'
+                        : 'bg-navy-sink text-chalk-dim hover:text-chalk'
+                    }`}
+                  >
+                    {u.is_link_admin ? 'Link admin ✓' : 'Link admin'}
+                  </button>
+                </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <p className="eyebrow mb-3">Add user</p>
+        <form onSubmit={addUser} className="flex flex-col gap-2">
+          <input
+            type="text"
+            value={newUsername}
+            onChange={e => setNewUsername(e.target.value)}
+            placeholder="Username"
+            maxLength={50}
+            required
+            className="field !py-2.5 text-sm font-mono"
+          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newTempPw}
+              onChange={e => setNewTempPw(e.target.value)}
+              placeholder="Temp password"
+              minLength={6}
+              required
+              className="field !py-2.5 text-sm font-mono"
+            />
+            <button
+              type="button"
+              onClick={() => setNewTempPw(generateTempPassword())}
+              className="btn btn-ghost flex-shrink-0 !py-2 text-xs"
+            >
+              Generate
+            </button>
+          </div>
+          <button type="submit" disabled={addingUser} className="btn btn-primary">
+            {addingUser ? 'Adding…' : 'Add user'}
+          </button>
+        </form>
+        {pwError && <p className="banner banner-error mt-2">{pwError}</p>}
+        {pwResult && (
+          <div className="banner banner-info mt-2 flex flex-col gap-2">
+            <span>
+              Send <b>{pwResult.username}</b> this temp password — they'll set their own on next login:
+            </span>
+            <div className="flex items-center gap-2">
+              <code className="font-mono text-sm text-chalk bg-navy-sink rounded px-2 py-1 select-all">
+                {pwResult.tempPassword}
+              </code>
+              <button
+                onClick={() => copyText(pwResult.tempPassword, 'pw')}
+                className="text-xs bg-cash/20 text-cash hover:bg-cash/30 px-3 py-1.5 rounded-lg transition-colors font-semibold"
+              >
+                {copiedId === 'pw' ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -117,7 +236,7 @@ export default function AdminPanel() {
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
                       <button
-                        onClick={() => copyLink(invite.token, invite.id)}
+                        onClick={() => copyText(`${appBase}/invite/${invite.token}`, invite.id)}
                         className="text-xs bg-cash/20 text-cash hover:bg-cash/30 px-3 py-1.5 rounded-lg transition-colors font-semibold"
                       >
                         {copiedId === invite.id ? 'Copied!' : 'Copy'}

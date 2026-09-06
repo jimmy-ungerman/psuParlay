@@ -94,6 +94,9 @@ export async function initDb() {
   if (!userCols.some(c => c.name === 'is_link_admin')) {
     db.exec(`ALTER TABLE users ADD COLUMN is_link_admin INTEGER DEFAULT 0`);
   }
+  if (!userCols.some(c => c.name === 'must_change_password')) {
+    db.exec(`ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0`);
+  }
 
   // Migration: consensus_votes table
   const cvTables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='consensus_votes'`).all();

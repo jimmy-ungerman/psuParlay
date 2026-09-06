@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import HomePage from './pages/HomePage.jsx';
+import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -17,6 +18,12 @@ function RedirectIfAuthed({ children }) {
 }
 
 function AppRoutes() {
+  const { user } = useAuth();
+
+  // A manually-added or admin-reset account must set its own password before it
+  // can touch anything else.
+  if (user && user.mustChangePassword) return <ChangePasswordPage />;
+
   return (
     <Routes>
       <Route path="/login" element={<RedirectIfAuthed><LoginPage /></RedirectIfAuthed>} />
