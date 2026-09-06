@@ -9,6 +9,18 @@ const CURRENT_SEASON = new Date().getFullYear();
 
 const round1 = (n) => Math.round(n * 10) / 10;
 
+// Standings order: most wins, then fewest losses, then best point differential
+// (cumulative cover margin vs the number), then most pushes. Players with no
+// settled picks (null differential) sink to the bottom.
+function byStandings(a, b) {
+  const spread = (e) => (e.spread_total == null ? -Infinity : e.spread_total);
+  return (b.wins - a.wins)
+    || (a.losses - b.losses)
+    || (spread(b) - spread(a) || 0)
+    || ((b.pushes || 0) - (a.pushes || 0))
+    || a.display_name.localeCompare(b.display_name);
+}
+
 // Sum of cover margins for settled live picks, keyed by `keyExpr` (a column
 // selectable from the picks/users join). Same scale as historical_picks.spread_value.
 async function liveSpreadTotals({ keyExpr, joinUsers = false, whereSql = '', params = [] }) {
@@ -102,8 +114,8 @@ router.get('/', requireAuth, async (req, res) => {
 
       leaderboard = Object.values(map)
         .filter(e => e.wins + e.losses + e.pushes > 0)
-        .sort((a, b) => b.wins - a.wins || a.losses - b.losses)
-        .map(e => ({ ...e, spread_total: round1(e.spread_total), streak: null, pending: 0 }));
+        .map(e => ({ ...e, spread_total: round1(e.spread_total), streak: null, pending: 0 }))
+        .sort(byStandings);
 
     } else if (parseInt(seasonParam) < CURRENT_SEASON) {
       // Historical season
@@ -116,8 +128,7 @@ router.get('/', requireAuth, async (req, res) => {
                 SUM(spread_value) as spread_total
          FROM historical_picks
          WHERE season = $1
-         GROUP BY display_name
-         ORDER BY wins DESC, losses ASC`,
+         GROUP BY display_name`,
         [parseInt(seasonParam)]
       );
       leaderboard = rows.map(r => ({
@@ -128,7 +139,7 @@ router.get('/', requireAuth, async (req, res) => {
         pending: 0,
         spread_total: round1(parseFloat(r.spread_total) || 0),
         streak: null,
-      }));
+      })).sort(byStandings);
 
     } else {
       // Current live season
@@ -143,8 +154,7 @@ router.get('/', requireAuth, async (req, res) => {
            COUNT(p.id) as total_picks
          FROM users u
          LEFT JOIN picks p ON p.user_id = u.id AND p.season = $1
-         GROUP BY u.id, u.username
-         ORDER BY wins DESC, losses ASC, pushes DESC`,
+         GROUP BY u.id, u.username`,
         [season]
       );
 
@@ -173,7 +183,7 @@ router.get('/', requireAuth, async (req, res) => {
         pending: parseInt(row.pending) || 0,
         spread_total: spreadByUser[row.id] !== undefined ? round1(spreadByUser[row.id]) : null,
         streak: computeStreak(picksByUser[row.id] || []),
-      }));
+      })).sort(byStandings);
     }
 
     res.json({ leaderboard, season: seasonParam });
