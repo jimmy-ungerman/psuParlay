@@ -23,8 +23,6 @@ router.get('/', requireAuth, async (req, res) => {
          p.*,
          u.username as display_name,
          g.home_team, g.away_team, g.home_abbr, g.away_abbr,
-         g.home_spread as current_home_spread,
-         g.total as current_total,
          g.commence_time, g.status as game_status,
          g.home_score, g.away_score
        FROM picks p
@@ -35,15 +33,7 @@ router.get('/', requireAuth, async (req, res) => {
       [week, season]
     );
 
-    const annotated = picks.map(p => {
-      const isTotalPick = p.picked_team === 'over' || p.picked_team === 'under';
-      const currentPickedSpread = isTotalPick
-        ? parseFloat(p.current_total)
-        : spreadForTeam(p.picked_team, parseFloat(p.current_home_spread));
-      return { ...p, current_picked_spread: currentPickedSpread };
-    });
-
-    res.json({ picks: annotated, week: parseInt(week), season: parseInt(season) });
+    res.json({ picks, week: parseInt(week), season: parseInt(season) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

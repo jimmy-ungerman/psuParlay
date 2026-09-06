@@ -52,7 +52,10 @@ async function updateScores() {
   );
   if (games.length === 0) return;
 
-  const liveData = await fetchLiveScores(games.map(g => g.espn_id));
+  const weeks = [...new Map(
+    games.map(g => [`${g.season}-${g.week_number}`, { season: g.season, week: g.week_number }])
+  ).values()];
+  const liveData = await fetchLiveScores(games.map(g => g.espn_id), weeks);
 
   for (const live of liveData) {
     const game = games.find(g => g.espn_id === live.espnId);

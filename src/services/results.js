@@ -1,5 +1,8 @@
 // Determines pick result given a pick row and a game row.
-// home_spread convention: negative = home is favorite (e.g., -7 means home -7)
+// Everything is graded against `spread_at_pick` — the line the pick locked in —
+// not the game's current line, which keeps moving until kickoff.
+// spread_at_pick convention: stored from the picked side's perspective, so a
+// home pick of -7 stores -7 and the matching away pick stores +7.
 export function calculateResult(pick, game) {
   if (
     game.status !== 'complete' ||
@@ -11,24 +14,22 @@ export function calculateResult(pick, game) {
 
   const homeScore = parseInt(game.home_score);
   const awayScore = parseInt(game.away_score);
+  const line = parseFloat(pick.spread_at_pick);
 
   if (pick.picked_team === 'over' || pick.picked_team === 'under') {
     const combined = homeScore + awayScore;
-    const total = parseFloat(pick.spread_at_pick);
-    const margin = pick.picked_team === 'over' ? combined - total : total - combined;
+    const margin = pick.picked_team === 'over' ? combined - line : line - combined;
     if (margin > 0) return 'win';
     if (margin < 0) return 'loss';
     return 'push';
   }
 
-  const homeMargin = homeScore - awayScore;
-  const homeSpread = parseFloat(game.home_spread);
-
-  // coverMargin > 0 = picked team covered, < 0 = failed to cover, 0 = push
-  const coverMargin =
-    pick.picked_team === 'home'
-      ? homeMargin + homeSpread
-      : -(homeMargin + homeSpread);
+  // Margin from the picked team's perspective, plus its spread.
+  // > 0 = covered, < 0 = failed to cover, 0 = push
+  const pickedMargin = pick.picked_team === 'home'
+    ? homeScore - awayScore
+    : awayScore - homeScore;
+  const coverMargin = pickedMargin + line;
 
   if (coverMargin > 0) return 'win';
   if (coverMargin < 0) return 'loss';

@@ -251,7 +251,7 @@ export default function ParlayCard() {
               const team = isTotal
                 ? (leg.picked_team === 'over' ? 'Over' : 'Under')
                 : (leg.picked_team === 'home' ? leg.home_team : leg.away_team);
-              const bet = `${team} ${isTotal ? leg.current_picked_spread : formatSpread(leg.current_picked_spread)}`.trim();
+              const bet = `${team} ${isTotal ? leg.spread_at_pick : formatSpread(leg.spread_at_pick)}`.trim();
 
               return (
                 <Leg
@@ -388,7 +388,7 @@ export default function ParlayCard() {
                     </span>
                   )}
                   <span className="text-xs font-mono text-chalk-faint ml-auto">
-                    {team} {isTotal ? pick.current_picked_spread : formatSpread(pick.current_picked_spread)}
+                    {team} {isTotal ? pick.spread_at_pick : formatSpread(pick.spread_at_pick)}
                   </span>
                 </div>
                 {pick.note && (

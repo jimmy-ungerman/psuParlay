@@ -34,17 +34,29 @@ export async function getWeekGames(season, week) {
   return parseScoreboard(res.data);
 }
 
-export async function fetchLiveScores(espnIds) {
-  try {
-    const res = await axios.get(`${ESPN_BASE}/scoreboard`, { timeout: 10000 });
-    const events = res.data.events || [];
-    return events
-      .filter(e => espnIds.includes(e.id))
-      .map(parseEvent);
-  } catch (err) {
-    console.error('ESPN score fetch failed:', err.message);
-    return [];
+// Pull scores for the given espn ids. `weeks` is a list of { season, week } to
+// query — needed because ESPN's default scoreboard only covers a rolling window,
+// so games that kicked off on Sunday/Monday (or last week) drop off it and never
+// get their final score. Falls back to the current scoreboard if no weeks given.
+export async function fetchLiveScores(espnIds, weeks = []) {
+  const ids = new Set(espnIds);
+  const boards = weeks.length > 0
+    ? weeks.map(w => getWeekGames(w.season, w.week).then(d => d.events).catch(err => {
+        console.error(`ESPN score fetch failed (${w.season} wk ${w.week}):`, err.message);
+        return [];
+      }))
+    : [getCurrentWeekGames().then(d => d.events).catch(err => {
+        console.error('ESPN score fetch failed:', err.message);
+        return [];
+      })];
+
+  const byId = new Map();
+  for (const events of await Promise.all(boards)) {
+    for (const event of events) {
+      if (ids.has(event.espnId)) byId.set(event.espnId, event);
+    }
   }
+  return [...byId.values()];
 }
 
 function parseScoreboard(data) {

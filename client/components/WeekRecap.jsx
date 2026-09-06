@@ -8,13 +8,15 @@ export default function WeekRecap({ picks, allTimeRecord }) {
   const parlayWon = losses === 0 && wins === picks.length;
   const parlayLost = losses > 0;
 
-  // MVP: pick with the most comfortable cover margin
+  // MVP: pick with the most comfortable cover margin, graded off the locked line
   function coverMargin(pick) {
-    if (!pick.home_score || !pick.away_score) return 0;
-    const homeMargin = parseInt(pick.home_score) - parseInt(pick.away_score);
-    return pick.picked_team === 'home'
-      ? homeMargin + parseFloat(pick.home_spread ?? 0)
-      : -(homeMargin + parseFloat(pick.home_spread ?? 0));
+    if (pick.home_score == null || pick.away_score == null) return 0;
+    if (pick.picked_team === 'over' || pick.picked_team === 'under') return 0;
+    const line = parseFloat(pick.spread_at_pick ?? 0);
+    const pickedMargin = pick.picked_team === 'home'
+      ? parseInt(pick.home_score) - parseInt(pick.away_score)
+      : parseInt(pick.away_score) - parseInt(pick.home_score);
+    return pickedMargin + line;
   }
 
   const settled  = picks.filter(p => p.result !== 'pending');
