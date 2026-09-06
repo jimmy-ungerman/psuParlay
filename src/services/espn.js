@@ -66,7 +66,14 @@ export function parseEvent(event) {
   const comp = event.competitions?.[0];
   const home = comp?.competitors?.find(c => c.homeAway === 'home');
   const away = comp?.competitors?.find(c => c.homeAway === 'away');
-  const statusName = comp?.status?.type?.name;
+  const status = mapStatus(comp?.status?.type?.name);
+
+  // ESPN returns score: "0" (a string) for games that haven't kicked off yet.
+  // Only trust scores once the game is actually underway, otherwise a scheduled
+  // game gets stored as 0-0 and renders as a phantom "Final".
+  const hasLiveScore = status === 'in_progress' || status === 'complete';
+  const parseScore = c =>
+    hasLiveScore && c?.score !== undefined && c.score !== '' ? parseInt(c.score) : null;
 
   return {
     espnId: event.id,
@@ -78,14 +85,20 @@ export function parseEvent(event) {
     awayRank: parseRank(away),
     conference: normalizeConference(comp?.groups?.name),
     commenceTime: event.date,
-    status: mapStatus(statusName),
-    homeScore: home?.score !== undefined && home.score !== '' ? parseInt(home.score) : null,
-    awayScore: away?.score !== undefined && away.score !== '' ? parseInt(away.score) : null,
+    status,
+    homeScore: parseScore(home),
+    awayScore: parseScore(away),
   };
 }
 
 function mapStatus(espnStatus) {
   if (espnStatus === 'STATUS_FINAL') return 'complete';
-  if (espnStatus === 'STATUS_IN_PROGRESS') return 'in_progress';
+  if (
+    espnStatus === 'STATUS_IN_PROGRESS' ||
+    espnStatus === 'STATUS_HALFTIME' ||
+    espnStatus === 'STATUS_END_PERIOD'
+  ) {
+    return 'in_progress';
+  }
   return 'scheduled';
 }

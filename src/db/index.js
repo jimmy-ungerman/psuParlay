@@ -53,6 +53,11 @@ export async function initDb() {
     db.exec(`ALTER TABLE picks ADD COLUMN note TEXT`);
   }
 
+  // Clear phantom scores on games that haven't finished. ESPN's scoreboard
+  // returns score "0" for games that haven't kicked off; older code stored that,
+  // making scheduled games render as "Final 0-0".
+  db.exec(`UPDATE games SET home_score = NULL, away_score = NULL WHERE status != 'complete'`);
+
   // Remove true week 0 games (before Aug 25 — week 1 can start as early as Aug 28)
   db.exec(`DELETE FROM picks WHERE game_id IN (SELECT id FROM games WHERE strftime('%m-%d', commence_time) < '08-25')`);
   db.exec(`DELETE FROM games WHERE strftime('%m-%d', commence_time) < '08-25'`);
