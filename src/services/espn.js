@@ -34,17 +34,29 @@ export async function getWeekGames(season, week) {
   return parseScoreboard(res.data);
 }
 
-export async function fetchLiveScores(espnIds) {
-  try {
-    const res = await axios.get(`${ESPN_BASE}/scoreboard`, { timeout: 10000 });
-    const events = res.data.events || [];
-    return events
-      .filter(e => espnIds.includes(e.id))
-      .map(parseEvent);
-  } catch (err) {
-    console.error('ESPN score fetch failed:', err.message);
-    return [];
+// Pull scores for the given espn ids. `weeks` is a list of { season, week } to
+// query — needed because ESPN's default scoreboard only covers a rolling window,
+// so games that kicked off on Sunday/Monday (or last week) drop off it and never
+// get their final score. Falls back to the current scoreboard if no weeks given.
+export async function fetchLiveScores(espnIds, weeks = []) {
+  const ids = new Set(espnIds);
+  const boards = weeks.length > 0
+    ? weeks.map(w => getWeekGames(w.season, w.week).then(d => d.events).catch(err => {
+        console.error(`ESPN score fetch failed (${w.season} wk ${w.week}):`, err.message);
+        return [];
+      }))
+    : [getCurrentWeekGames().then(d => d.events).catch(err => {
+        console.error('ESPN score fetch failed:', err.message);
+        return [];
+      })];
+
+  const byId = new Map();
+  for (const events of await Promise.all(boards)) {
+    for (const event of events) {
+      if (ids.has(event.espnId)) byId.set(event.espnId, event);
+    }
   }
+  return [...byId.values()];
 }
 
 function parseScoreboard(data) {
@@ -66,7 +78,14 @@ export function parseEvent(event) {
   const comp = event.competitions?.[0];
   const home = comp?.competitors?.find(c => c.homeAway === 'home');
   const away = comp?.competitors?.find(c => c.homeAway === 'away');
-  const statusName = comp?.status?.type?.name;
+  const status = mapStatus(comp?.status?.type?.name);
+
+  // ESPN returns score: "0" (a string) for games that haven't kicked off yet.
+  // Only trust scores once the game is actually underway, otherwise a scheduled
+  // game gets stored as 0-0 and renders as a phantom "Final".
+  const hasLiveScore = status === 'in_progress' || status === 'complete';
+  const parseScore = c =>
+    hasLiveScore && c?.score !== undefined && c.score !== '' ? parseInt(c.score) : null;
 
   return {
     espnId: event.id,
@@ -78,14 +97,20 @@ export function parseEvent(event) {
     awayRank: parseRank(away),
     conference: normalizeConference(comp?.groups?.name),
     commenceTime: event.date,
-    status: mapStatus(statusName),
-    homeScore: home?.score !== undefined && home.score !== '' ? parseInt(home.score) : null,
-    awayScore: away?.score !== undefined && away.score !== '' ? parseInt(away.score) : null,
+    status,
+    homeScore: parseScore(home),
+    awayScore: parseScore(away),
   };
 }
 
 function mapStatus(espnStatus) {
   if (espnStatus === 'STATUS_FINAL') return 'complete';
-  if (espnStatus === 'STATUS_IN_PROGRESS') return 'in_progress';
+  if (
+    espnStatus === 'STATUS_IN_PROGRESS' ||
+    espnStatus === 'STATUS_HALFTIME' ||
+    espnStatus === 'STATUS_END_PERIOD'
+  ) {
+    return 'in_progress';
+  }
   return 'scheduled';
 }

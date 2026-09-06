@@ -172,7 +172,7 @@ router.get('/history', requireAuth, async (req, res) => {
         const { rows: picks } = await pool.query(
           `SELECT hp.display_name, hp.result, hp.spread_value, hp.picked_team, hp.canonical_team,
                   g.home_team, g.away_team, g.home_abbr, g.away_abbr,
-                  g.home_score, g.away_score, g.home_spread
+                  g.home_score, g.away_score, g.home_spread, g.status as game_status
            FROM historical_picks hp
            LEFT JOIN games g ON hp.game_id = g.id
            WHERE hp.season = $1 AND hp.week_number = $2
@@ -199,7 +199,8 @@ router.get('/history', requireAuth, async (req, res) => {
     const history = await Promise.all(weeks.map(async ({ week_number, season }) => {
       const { rows: picks } = await pool.query(
         `SELECT p.*, u.username as display_name,
-                g.home_team, g.away_team, g.home_score, g.away_score, g.home_spread
+                g.home_team, g.away_team, g.home_score, g.away_score, g.home_spread,
+                g.status as game_status
          FROM picks p
          JOIN users u ON p.user_id = u.id
          JOIN games g ON p.game_id = g.id

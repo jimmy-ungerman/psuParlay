@@ -1,11 +1,13 @@
 import { schedule } from 'node-cron';
 import pool from '../db/index.js';
 import { fetchLiveScores } from '../services/espn.js';
-import { calculateResult } from '../services/results.js';
+import { calculateResult, getPickDeadline } from '../services/results.js';
 import { fetchOddsApiGames, fluctuateSpread, isMockMode, teamsMatch } from '../services/odds.js';
 // Every 15 min: update scores and resolve picks
-// Every 6 hours: refresh spreads from The Odds API (or simulate movement in mock mode)
-// Saturday 11:31 AM ET: final spread snapshot after picks close
+// Every 4 hours: refresh spreads from The Odds API (or simulate movement in mock mode)
+// Saturday 11:29 AM ET: final spread snapshot just before picks close
+// Spreads are never refreshed once a game's pick deadline has passed, so the
+// line is frozen at lock.
 export function startScoreUpdater() {
   schedule('*/15 * * * *', async () => {
     try { await updateScores(); } catch (err) { console.error('Score update error:', err.message); }
@@ -21,10 +23,11 @@ export function startScoreUpdater() {
     } catch (err) { console.error('Spread update error:', err.message); }
   });
 
-  // Final spread update at 11:31 AM ET every Saturday (1 minute after picks close)
-  schedule('31 11 * * 6', async () => {
+  // Final spread update at 11:29 AM ET every Saturday — the last refresh before
+  // picks close at 11:30, so the slip shows the true closing line.
+  schedule('29 11 * * 6', async () => {
     try {
-      console.log('Running final Saturday spread update (11:31 AM ET)');
+      console.log('Running final Saturday spread update (11:29 AM ET)');
       if (isMockMode()) {
         await simulateLineMovement();
       } else {
@@ -33,7 +36,14 @@ export function startScoreUpdater() {
     } catch (err) { console.error('Final spread update error:', err.message); }
   }, { timezone: 'America/New_York' });
 
-  console.log('Score updater scheduled (scores: every 15 min, spreads: every 6 hours + Saturday 11:31 AM ET)');
+  console.log('Score updater scheduled (scores: every 15 min, spreads: every 4 hours + Saturday 11:29 AM ET)');
+}
+
+// A spread should only move while the pick is still open. Once the deadline
+// (11:30 AM ET on game day) has passed, the line the picker saw is locked in.
+function pickStillOpen(game) {
+  const deadline = getPickDeadline(game.commence_time);
+  return deadline && Date.now() < deadline.getTime();
 }
 
 async function updateScores() {
@@ -42,11 +52,23 @@ async function updateScores() {
   );
   if (games.length === 0) return;
 
-  const liveData = await fetchLiveScores(games.map(g => g.espn_id));
+  const weeks = [...new Map(
+    games.map(g => [`${g.season}-${g.week_number}`, { season: g.season, week: g.week_number }])
+  ).values()];
+  const liveData = await fetchLiveScores(games.map(g => g.espn_id), weeks);
 
   for (const live of liveData) {
     const game = games.find(g => g.espn_id === live.espnId);
     if (!game) continue;
+
+    // Guard against ESPN briefly reporting a not-yet-played game as FINAL with no
+    // score (happens for postponed/cancelled games and transient feed glitches).
+    // Marking it 'complete' here is a one-way door — updateScores never revisits
+    // complete games — so it would stick as a phantom "0-0 Final".
+    const noScore = !live.homeScore && !live.awayScore;
+    if (live.status === 'complete' && noScore && new Date(game.commence_time) > new Date()) {
+      continue;
+    }
 
     await pool.query(
       `UPDATE games SET status = $1, home_score = $2, away_score = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4`,
@@ -77,10 +99,11 @@ async function resolvePicksForGame(game) {
 }
 
 async function refreshRealSpreads() {
-  const { rows: games } = await pool.query(
+  const { rows: allScheduled } = await pool.query(
     `SELECT * FROM games WHERE status = 'scheduled'`
   );
-  if (games.length === 0) return; // no scheduled games, don't burn an API call
+  const games = allScheduled.filter(pickStillOpen);
+  if (games.length === 0) return; // nothing still open, don't burn an API call
 
   const oddsGames = await fetchOddsApiGames();
 
@@ -107,10 +130,10 @@ async function refreshRealSpreads() {
 
 // Mock mode only: simulate small spread movements for demo
 async function simulateLineMovement() {
-  const { rows: games } = await pool.query(
+  const { rows: allScheduled } = await pool.query(
     `SELECT * FROM games WHERE status = 'scheduled' AND home_spread IS NOT NULL`
   );
-  for (const game of games) {
+  for (const game of allScheduled.filter(pickStillOpen)) {
     if (Math.random() > 0.2) continue;
     const newSpread = fluctuateSpread(parseFloat(game.home_spread));
     await pool.query(`UPDATE games SET home_spread = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [newSpread, game.id]);

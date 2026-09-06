@@ -136,7 +136,7 @@ export default function History() {
                                 ? `${pick.picked_team} · ${pick.home_team} vs ${pick.away_team}`
                                 : pick.picked_team || '—'}
                           </p>
-                          {hasGame && pick.home_score !== null && (
+                          {hasGame && pick.game_status === 'complete' && pick.home_score !== null && (
                             <p className="text-xs text-chalk-faint mt-0.5 font-mono">
                               Final: {pick.home_team} {pick.home_score}–{pick.away_score} {pick.away_team}
                             </p>
@@ -151,9 +151,9 @@ export default function History() {
                     const isTotalPick = pick.picked_team === 'over' || pick.picked_team === 'under';
                     const pickedTeam = isTotalPick ? null : (pick.picked_team === 'home' ? pick.home_team : pick.away_team);
                     const opponent = isTotalPick ? null : (pick.picked_team === 'home' ? pick.away_team : pick.home_team);
-                    const spread = isTotalPick
-                      ? parseFloat(pick.spread_at_pick)
-                      : pick.picked_team === 'home' ? parseFloat(pick.home_spread) : -parseFloat(pick.home_spread);
+                    // spread_at_pick is stored from the picked side's perspective
+                    // (and is the total for over/under picks).
+                    const spread = parseFloat(pick.spread_at_pick);
 
                     return (
                       <div key={pick.id} className="px-4 py-3 flex items-center justify-between gap-3">
@@ -164,7 +164,7 @@ export default function History() {
                               ? `${pick.picked_team === 'over' ? 'Over' : 'Under'} ${spread} · ${pick.home_team} vs ${pick.away_team}`
                               : `${pickedTeam} ${formatSpread(spread)} vs ${opponent}`}
                           </p>
-                          {pick.home_score !== null && (
+                          {pick.game_status === 'complete' && pick.home_score !== null && (
                             <p className="text-xs text-chalk-faint mt-0.5 font-mono">
                               Final: {pick.home_team} {pick.home_score}–{pick.away_score} {pick.away_team}
                               {isTotalPick && ` (${pick.home_score + pick.away_score} pts)`}
