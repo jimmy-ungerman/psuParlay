@@ -9,10 +9,13 @@ const CURRENT_SEASON = new Date().getFullYear();
 
 const round1 = (n) => Math.round(n * 10) / 10;
 
-// Standings order: most wins, then fewest losses, then best point differential
-// (cumulative cover margin vs the number), then most pushes. Players with no
-// settled picks (null differential) sink to the bottom.
+// Standings order: players with no settled picks always sit at the bottom;
+// above that, most wins, then fewest losses, then best point differential
+// (cumulative cover margin vs the number), then most pushes.
 function byStandings(a, b) {
+  const played = (e) => e.wins + e.losses + e.pushes > 0;
+  if (played(a) !== played(b)) return played(a) ? -1 : 1;
+
   const spread = (e) => (e.spread_total == null ? -Infinity : e.spread_total);
   return (b.wins - a.wins)
     || (a.losses - b.losses)
