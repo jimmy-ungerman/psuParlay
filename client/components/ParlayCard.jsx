@@ -58,7 +58,11 @@ function Leg({ who, bet, result, gameStatus, detail }) {
 // pickedSide: 'home' | 'away' | null (null / totals show the raw matchup)
 function legDetail(g, pickedSide, isTotal) {
   if (!g) return null;
-  const { home_team, away_team, home_abbr, away_abbr, home_score, away_score, status, commence_time } = g;
+  const { home_team, away_team, home_abbr, away_abbr, home_score, away_score, commence_time } = g;
+  // Pick rows expose the game's status as `game_status`; the consensus leg
+  // passes a raw game object with `status`.
+  const status = g.status ?? g.game_status;
+  const hasScore = home_score != null && away_score != null;
 
   let matchup;
   if (isTotal || !pickedSide) {
@@ -68,11 +72,11 @@ function legDetail(g, pickedSide, isTotal) {
     matchup = `${pickedSide === 'home' ? 'vs' : '@'} ${opp}`;
   }
 
-  if (status === 'complete' && home_score !== null) {
-    const pts = isTotal ? ` · ${home_score + away_score} pts` : '';
+  if (status === 'complete' && hasScore) {
+    const pts = isTotal ? ` · ${Number(home_score) + Number(away_score)} pts` : '';
     return <>{matchup} · Final <b>{away_abbr} {away_score}–{home_score} {home_abbr}</b>{pts}</>;
   }
-  if (status === 'in_progress' && home_score !== null) {
+  if (status === 'in_progress' && hasScore) {
     return <>{matchup} · <span className="q">Live</span> <b>{away_abbr} {away_score}–{home_score} {home_abbr}</b></>;
   }
   const when = commence_time
