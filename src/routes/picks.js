@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pool from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { spreadForTeam, getPickDeadline } from '../services/results.js';
+import { ensureGamesSeededCached } from '../services/schedule.js';
 const router = Router();
 
 // GET /api/picks?week=&season=
@@ -10,12 +11,18 @@ router.get('/', requireAuth, async (req, res) => {
     let { week, season } = req.query;
 
     if (!week || !season) {
-      const { rows } = await pool.query(
-        'SELECT week_number, season FROM games ORDER BY season DESC, week_number DESC LIMIT 1'
-      );
-      if (rows.length === 0) return res.json({ picks: [], week: null, season: null });
-      week = rows[0].week_number;
-      season = rows[0].season;
+      // Same "active week" the games route serves, so the slip rolls over to the
+      // new week on Monday morning even if the Pick tab hasn't been opened yet.
+      try {
+        ({ week, season } = await ensureGamesSeededCached());
+      } catch {
+        const { rows } = await pool.query(
+          'SELECT week_number, season FROM games ORDER BY season DESC, week_number DESC LIMIT 1'
+        );
+        if (rows.length === 0) return res.json({ picks: [], week: null, season: null });
+        week = rows[0].week_number;
+        season = rows[0].season;
+      }
     }
 
     const { rows: picks } = await pool.query(

@@ -26,6 +26,78 @@ export async function getCurrentWeekGames() {
   return parseScoreboard(res.data);
 }
 
+// The pick week rolls to the next one every Monday at 6 AM ET — ahead of ESPN's
+// own scoreboard, which lingers on the just-played week until roughly Tuesday.
+// Once we're past that Monday, return next week's slate instead of the current one.
+const WEEK_ROLLOVER_HOUR_ET = 6;
+
+export async function getActiveWeekGames() {
+  const current = await getCurrentWeekGames();
+  if (!pastWeekRollover(current.events)) return current;
+  console.log(`Week rollover: past Monday cutoff for wk ${current.week}, advancing to wk ${current.week + 1}`);
+
+  const nextWeek = current.week + 1;
+  try {
+    const next = await getWeekGames(current.season, nextWeek);
+    if (next.events.length > 0) {
+      return { season: current.season, week: nextWeek, events: next.events };
+    }
+  } catch (err) {
+    console.error(`Week rollover: ${current.season} wk ${nextWeek} fetch failed:`, err.message);
+  }
+  return current;
+}
+
+// True once `now` is past 6 AM ET on the Monday after this slate's Saturday.
+export function pastWeekRollover(events, now = Date.now()) {
+  const sat = slateSaturday(events);
+  if (!sat) return false;
+  const monday = addDays(sat, 2);
+  return now >= etCutoff(monday, WEEK_ROLLOVER_HOUR_ET);
+}
+
+// The college-football "week Saturday" (YYYY-MM-DD, ET) that a kickoff belongs to:
+// Thu–Sat map to that Saturday, Sun/Mon map back to the Saturday just before them.
+export function weekSaturday(commenceTime) {
+  // ET is UTC-4 (EDT) for the whole Sep–Nov season.
+  const et = new Date(new Date(commenceTime).getTime() - 4 * 3600 * 1000);
+  const day = et.getUTCDay(); // 0=Sun … 6=Sat
+  const offset = day === 0 ? -1 : day === 1 ? -2 : 6 - day;
+  et.setUTCDate(et.getUTCDate() + offset);
+  return et.toISOString().slice(0, 10);
+}
+
+// The Saturday most of a week's games belong to (most common; latest on a tie).
+function slateSaturday(events) {
+  if (!events?.length) return null;
+  const counts = {};
+  for (const e of events) {
+    const s = weekSaturday(e.commenceTime);
+    counts[s] = (counts[s] || 0) + 1;
+  }
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? 1 : -1))[0][0];
+}
+
+function addDays(dateStr, n) {
+  const dt = new Date(`${dateStr}T00:00:00Z`);
+  dt.setUTCDate(dt.getUTCDate() + n);
+  return dt.toISOString().slice(0, 10);
+}
+
+// Epoch ms for `YYYY-MM-DD` at `hour`:00 America/New_York (DST-aware).
+function etCutoff(dateStr, hour) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  for (const tzOffset of [4, 5]) { // EDT, then EST
+    const candidate = new Date(Date.UTC(y, m - 1, d, hour + tzOffset, 0));
+    const etHour = parseInt(
+      candidate.toLocaleString('en-US', { timeZone: 'America/New_York', hour: '2-digit', hour12: false })
+    );
+    if (etHour === hour) return candidate.getTime();
+  }
+  return Date.UTC(y, m - 1, d, hour + 4, 0);
+}
+
 export async function getWeekGames(season, week) {
   const res = await axios.get(`${ESPN_BASE}/scoreboard`, {
     params: { dates: season, week, seasontype: 2 },

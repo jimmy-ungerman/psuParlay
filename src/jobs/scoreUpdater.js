@@ -3,6 +3,7 @@ import pool from '../db/index.js';
 import { fetchLiveScores } from '../services/espn.js';
 import { calculateResult, getPickDeadline } from '../services/results.js';
 import { fetchOddsApiGames, fluctuateSpread, isMockMode, teamsMatch } from '../services/odds.js';
+import { ensureGamesSeeded } from '../services/schedule.js';
 // Every 15 min: update scores and resolve picks
 // Every 4 hours: refresh spreads from The Odds API (or simulate movement in mock mode)
 // Saturday 11:29 AM ET: final spread snapshot just before picks close
@@ -36,7 +37,18 @@ export function startScoreUpdater() {
     } catch (err) { console.error('Final spread update error:', err.message); }
   }, { timezone: 'America/New_York' });
 
-  console.log('Score updater scheduled (scores: every 15 min, spreads: every 4 hours + Saturday 11:29 AM ET)');
+  // Advance the games table to the new week just after the Monday 6 AM ET
+  // rollover, and keep it topped up through the day, so the app moves on to the
+  // next slate without waiting for someone to open the Pick tab.
+  schedule('15 6 * * 1', () => {
+    ensureGamesSeeded().catch(err => console.error('Monday week-seed error:', err.message));
+  }, { timezone: 'America/New_York' });
+
+  schedule('0 */6 * * *', () => {
+    ensureGamesSeeded().catch(err => console.error('Periodic week-seed error:', err.message));
+  });
+
+  console.log('Score updater scheduled (scores: every 15 min, spreads: every 4 hours + Saturday 11:29 AM ET; week seed: Monday 6:15 AM ET + every 6h)');
 }
 
 // A spread should only move while the pick is still open. Once the deadline
