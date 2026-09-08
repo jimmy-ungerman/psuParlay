@@ -65,7 +65,8 @@ router.get('/h2h/:userId', requireAuth, async (req, res) => {
     if (theirInfo.length === 0) return res.status(404).json({ error: 'User not found' });
 
     const { rows } = await pool.query(
-      `SELECT p1.week_number, p1.season, p1.result as my_result, p2.result as their_result
+      `SELECT p1.week_number AS week_number, p1.season AS season,
+              p1.result as my_result, p2.result as their_result
        FROM picks p1
        JOIN picks p2
          ON p1.week_number = p2.week_number AND p1.season = p2.season
@@ -74,7 +75,8 @@ router.get('/h2h/:userId', requireAuth, async (req, res) => {
          AND p1.result != 'pending'
          AND p2.result != 'pending'
        UNION ALL
-       SELECT hp1.week_number, hp1.season, hp1.result as my_result, hp2.result as their_result
+       SELECT hp1.week_number AS week_number, hp1.season AS season,
+              hp1.result as my_result, hp2.result as their_result
        FROM historical_picks hp1
        JOIN historical_picks hp2
          ON hp1.week_number = hp2.week_number AND hp1.season = hp2.season
