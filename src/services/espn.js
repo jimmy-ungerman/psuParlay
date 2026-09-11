@@ -21,8 +21,13 @@ function normalizeConference(name) {
   return CONF_NAME_MAP[name] ?? name;
 }
 
+// groups=80 = FBS, limit=300 ensures we get every game in the week rather than
+// ESPN's default "top 25-ish" scoreboard slate.
 export async function getCurrentWeekGames() {
-  const res = await axios.get(`${ESPN_BASE}/scoreboard`, { timeout: 10000 });
+  const res = await axios.get(`${ESPN_BASE}/scoreboard`, {
+    params: { groups: 80, limit: 300 },
+    timeout: 10000,
+  });
   return parseScoreboard(res.data);
 }
 
@@ -100,7 +105,7 @@ function etCutoff(dateStr, hour) {
 
 export async function getWeekGames(season, week) {
   const res = await axios.get(`${ESPN_BASE}/scoreboard`, {
-    params: { dates: season, week, seasontype: 2 },
+    params: { dates: season, week, seasontype: 2, groups: 80, limit: 300 },
     timeout: 10000,
   });
   return parseScoreboard(res.data);
