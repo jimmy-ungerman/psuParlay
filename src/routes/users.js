@@ -18,34 +18,6 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/users — manually create an account (admin only), bypassing the invite
-// flow. The user logs in with the temp password and must change it on first login.
-router.post('/', requireAdmin, async (req, res) => {
-  const { username, tempPassword } = req.body;
-  if (!username?.trim() || !tempPassword) {
-    return res.status(400).json({ error: 'Username and temporary password required' });
-  }
-  if (tempPassword.length < 6) {
-    return res.status(400).json({ error: 'Temporary password must be at least 6 characters' });
-  }
-
-  try {
-    const passwordHash = await bcrypt.hash(tempPassword, 12);
-    const { rows } = await pool.query(
-      `INSERT INTO users (username, password_hash, is_admin, must_change_password)
-       VALUES ($1, $2, 0, 1) RETURNING id, username, is_admin, is_link_admin, must_change_password`,
-      [username.trim(), passwordHash]
-    );
-    res.status(201).json({ user: rows[0] });
-  } catch (err) {
-    if (err.message?.includes('UNIQUE constraint failed')) {
-      return res.status(409).json({ error: 'Username already taken' });
-    }
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 // POST /api/users/:id/reset-password — admin sets a temp password for a user who
 // forgot theirs (no email flow). Forces a change on the user's next login.
 router.post('/:id/reset-password', requireAdmin, async (req, res) => {

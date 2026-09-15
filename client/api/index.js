@@ -63,7 +63,6 @@ export const api = {
 
   // User management (admin)
   setLinkAdmin: (userId, enabled) => request('PATCH', `/users/${userId}/link-admin`, { enabled }),
-  createUser: (username, tempPassword) => request('POST', '/users', { username, tempPassword }),
   resetUserPassword: (userId, tempPassword) =>
     request('POST', `/users/${userId}/reset-password`, { tempPassword }),
 

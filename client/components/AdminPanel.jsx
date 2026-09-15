@@ -16,11 +16,11 @@ export default function AdminPanel() {
   const [creating, setCreating] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
 
-  const [newUsername, setNewUsername] = useState('');
-  const [newTempPw, setNewTempPw] = useState(generateTempPassword());
-  const [addingUser, setAddingUser] = useState(false);
   const [pwError, setPwError] = useState('');
-  // { userId, username, tempPassword } — the last temp password to hand off
+  // { userId, username, tempPassword } — the last temp password to hand off.
+  // Only dismissed by an explicit click on the modal's Done button — never
+  // cleared as a side effect of load() or any other background state change,
+  // so the admin always has a chance to copy it.
   const [pwResult, setPwResult] = useState(null);
   const [resettingId, setResettingId] = useState(null);
 
@@ -61,24 +61,6 @@ export default function AdminPanel() {
     if (!confirm('Revoke this invite?')) return;
     await api.deleteInvite(id);
     await load();
-  }
-
-  async function addUser(e) {
-    e.preventDefault();
-    setPwError('');
-    setPwResult(null);
-    setAddingUser(true);
-    try {
-      const { user } = await api.createUser(newUsername.trim(), newTempPw);
-      setPwResult({ userId: user.id, username: user.username, tempPassword: newTempPw });
-      setNewUsername('');
-      setNewTempPw(generateTempPassword());
-      await load();
-    } catch (err) {
-      setPwError(err.message);
-    } finally {
-      setAddingUser(false);
-    }
   }
 
   async function resetPassword(user) {
@@ -148,60 +130,7 @@ export default function AdminPanel() {
         )}
       </div>
 
-      <div>
-        <p className="eyebrow mb-3">Add user</p>
-        <form onSubmit={addUser} className="flex flex-col gap-2">
-          <input
-            type="text"
-            value={newUsername}
-            onChange={e => setNewUsername(e.target.value)}
-            placeholder="Username"
-            maxLength={50}
-            required
-            className="field !py-2.5 text-sm font-mono"
-          />
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newTempPw}
-              onChange={e => setNewTempPw(e.target.value)}
-              placeholder="Temp password"
-              minLength={6}
-              required
-              className="field !py-2.5 text-sm font-mono"
-            />
-            <button
-              type="button"
-              onClick={() => setNewTempPw(generateTempPassword())}
-              className="btn btn-ghost flex-shrink-0 !py-2 text-xs"
-            >
-              Generate
-            </button>
-          </div>
-          <button type="submit" disabled={addingUser} className="btn btn-primary">
-            {addingUser ? 'Adding…' : 'Add user'}
-          </button>
-        </form>
-        {pwError && <p className="banner banner-error mt-2">{pwError}</p>}
-        {pwResult && (
-          <div className="banner banner-info mt-2 flex flex-col gap-2">
-            <span>
-              Send <b>{pwResult.username}</b> this temp password — they'll set their own on next login:
-            </span>
-            <div className="flex items-center gap-2">
-              <code className="font-mono text-sm text-chalk bg-navy-sink rounded px-2 py-1 select-all">
-                {pwResult.tempPassword}
-              </code>
-              <button
-                onClick={() => copyText(pwResult.tempPassword, 'pw')}
-                className="text-xs bg-cash/20 text-cash hover:bg-cash/30 px-3 py-1.5 rounded-lg transition-colors font-semibold"
-              >
-                {copiedId === 'pw' ? 'Copied!' : 'Copy'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      {pwError && <p className="banner banner-error">{pwError}</p>}
 
       <div>
         <p className="eyebrow mb-3">Generate invite</p>
@@ -273,6 +202,30 @@ export default function AdminPanel() {
             </div>
           )}
         </>
+      )}
+
+      {pwResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="card p-5 max-w-sm w-full flex flex-col gap-3">
+            <p className="text-chalk text-sm">
+              Send <b>{pwResult.username}</b> this temp password — they'll set their own on next login. This won't be shown again.
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="font-mono text-sm text-chalk bg-navy-sink rounded px-2 py-1.5 select-all flex-1 truncate">
+                {pwResult.tempPassword}
+              </code>
+              <button
+                onClick={() => copyText(pwResult.tempPassword, 'pw')}
+                className="text-xs bg-cash/20 text-cash hover:bg-cash/30 px-3 py-1.5 rounded-lg transition-colors font-semibold flex-shrink-0"
+              >
+                {copiedId === 'pw' ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            <button onClick={() => setPwResult(null)} className="btn btn-primary mt-1">
+              Done
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
