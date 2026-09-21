@@ -5,16 +5,20 @@ import { calculateResult, getPickDeadline } from '../services/results.js';
 import { fetchOddsApiGames, fluctuateSpread, isMockMode, teamsMatch } from '../services/odds.js';
 import { ensureGamesSeeded } from '../services/schedule.js';
 // Every 5 min: update scores and resolve picks (keeps the slip's live scores current)
-// Every 4 hours: refresh spreads from The Odds API (or simulate movement in mock mode)
+// Every 12 hours: refresh spreads from The Odds API (or simulate movement in mock mode)
 // Saturday 11:29 AM ET: final spread snapshot just before picks close
 // Spreads are never refreshed once a game's pick deadline has passed, so the
 // line is frozen at lock.
+//
+// Cadence is tuned to stay well under the Odds API's 500 credits/month free
+// tier (each call costs ~2 credits for spreads+totals @ 1 region) — running
+// every 4 hours burned through the monthly quota before the season did.
 export function startScoreUpdater() {
   schedule('*/5 * * * *', async () => {
     try { await updateScores(); } catch (err) { console.error('Score update error:', err.message); }
   });
 
-  schedule('0 */4 * * *', async () => {
+  schedule('0 */12 * * *', async () => {
     try {
       if (isMockMode()) {
         await simulateLineMovement();
@@ -48,7 +52,7 @@ export function startScoreUpdater() {
     ensureGamesSeeded().catch(err => console.error('Periodic week-seed error:', err.message));
   });
 
-  console.log('Score updater scheduled (scores: every 5 min, spreads: every 4 hours + Saturday 11:29 AM ET; week seed: Monday 6:15 AM ET + every 6h)');
+  console.log('Score updater scheduled (scores: every 5 min, spreads: every 12 hours + Saturday 11:29 AM ET; week seed: Monday 6:15 AM ET + every 6h)');
 }
 
 // A spread should only move while the pick is still open. Once the deadline
@@ -127,16 +131,18 @@ async function refreshRealSpreads() {
 
     const newSpread = match.homeSpread;
     const newTotal = match.total ?? null;
+    const newLowConfidence = match.lowConfidence ? 1 : 0;
     const spreadChanged = parseFloat(newSpread) !== parseFloat(game.home_spread);
     const totalChanged = newTotal !== null && parseFloat(newTotal) !== parseFloat(game.total);
+    const confidenceChanged = newLowConfidence !== (game.low_confidence ? 1 : 0);
 
-    if (!spreadChanged && !totalChanged) continue;
+    if (!spreadChanged && !totalChanged && !confidenceChanged) continue;
 
     await pool.query(
-      `UPDATE games SET home_spread = $1, total = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`,
-      [newSpread, newTotal, game.id]
+      `UPDATE games SET home_spread = $1, total = $2, low_confidence = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4`,
+      [newSpread, newTotal, newLowConfidence, game.id]
     );
-    console.log(`Odds updated: ${game.home_team} vs ${game.away_team}: spread ${game.home_spread} → ${newSpread}, total ${game.total} → ${newTotal}`);
+    console.log(`Odds updated: ${game.home_team} vs ${game.away_team}: spread ${game.home_spread} → ${newSpread}, total ${game.total} → ${newTotal}${newLowConfidence ? ' (LOW CONFIDENCE)' : ''}`);
   }
 }
 

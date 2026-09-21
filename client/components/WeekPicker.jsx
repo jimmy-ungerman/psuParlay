@@ -369,7 +369,17 @@ export default function WeekPicker() {
           return (
             <div key={game.id} className="linegame">
               <div className="flex items-center justify-between text-[0.62rem] font-mono text-chalk-faint mb-1">
-                <span>{formatTime(game.commence_time)}</span>
+                <span className="flex items-center gap-1">
+                  {formatTime(game.commence_time)}
+                  {!!game.low_confidence && (
+                    <span
+                      className="text-amber-500"
+                      title="Books disagree on this line — treat the spread as unconfirmed"
+                    >
+                      ⚠ line unconfirmed
+                    </span>
+                  )}
+                </span>
                 <span>
                   {takenBy
                     ? `${takenBy}'s pick`

@@ -46,6 +46,9 @@ export async function initDb() {
   if (!cols.some(c => c.name === 'away_rank')) {
     db.exec(`ALTER TABLE games ADD COLUMN away_rank INTEGER`);
   }
+  if (!cols.some(c => c.name === 'low_confidence')) {
+    db.exec(`ALTER TABLE games ADD COLUMN low_confidence INTEGER DEFAULT 0`);
+  }
 
   // Migration: pick trash talk note
   const pickCols = db.prepare(`PRAGMA table_info(picks)`).all();
