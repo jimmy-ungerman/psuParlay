@@ -8,6 +8,15 @@ export function isMockMode() {
   return !process.env.ODDS_API_KEY;
 }
 
+// In-memory snapshot of the most recent quota headers The Odds API returned.
+// Only updated by an actual API call (there's no separate endpoint to poll
+// this), so it's null until the first request of the process's lifetime.
+let quotaState = null;
+
+export function getOddsQuota() {
+  return quotaState;
+}
+
 // Fetch current NCAAF spread odds from The Odds API.
 // Returns games with real home_spread values.
 export async function fetchOddsApiGames() {
@@ -21,9 +30,18 @@ export async function fetchOddsApiGames() {
     timeout: 10000,
   });
 
-  // Log remaining API quota
   const remaining = res.headers['x-requests-remaining'];
-  if (remaining) console.log(`Odds API requests remaining: ${remaining}`);
+  const used = res.headers['x-requests-used'];
+  const lastCost = res.headers['x-requests-last'];
+  if (remaining != null) {
+    quotaState = {
+      remaining: Number(remaining),
+      used: used != null ? Number(used) : null,
+      lastCost: lastCost != null ? Number(lastCost) : null,
+      updatedAt: new Date().toISOString(),
+    };
+    console.log(`Odds API requests remaining: ${remaining}`);
+  }
 
   return res.data.map(parseOddsEvent).filter(Boolean);
 }
