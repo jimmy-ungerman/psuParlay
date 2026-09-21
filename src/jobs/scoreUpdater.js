@@ -114,14 +114,15 @@ async function resolvePicksForGame(game) {
 
 }
 
-async function refreshRealSpreads() {
+export async function refreshRealSpreads() {
   const { rows: allScheduled } = await pool.query(
     `SELECT * FROM games WHERE status = 'scheduled'`
   );
   const games = allScheduled.filter(pickStillOpen);
-  if (games.length === 0) return; // nothing still open, don't burn an API call
+  if (games.length === 0) return { checked: 0, updated: 0 }; // nothing still open, don't burn an API call
 
   const oddsGames = await fetchOddsApiGames();
+  let updated = 0;
 
   for (const game of games) {
     const match = oddsGames.find(
@@ -143,7 +144,10 @@ async function refreshRealSpreads() {
       [newSpread, newTotal, newLowConfidence, game.id]
     );
     console.log(`Odds updated: ${game.home_team} vs ${game.away_team}: spread ${game.home_spread} → ${newSpread}, total ${game.total} → ${newTotal}${newLowConfidence ? ' (LOW CONFIDENCE)' : ''}`);
+    updated++;
   }
+
+  return { checked: games.length, updated };
 }
 
 // Mock mode only: simulate small spread movements for demo

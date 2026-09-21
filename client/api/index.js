@@ -30,6 +30,8 @@ export const api = {
 
   // Games & picks
   getGames: () => request('GET', '/games'),
+  getOddsQuota: () => request('GET', '/games/odds-quota'),
+  refreshOdds: () => request('POST', '/games/refresh-odds'),
   getPicks: (week, season) => {
     const qs = week && season ? `?week=${week}&season=${season}` : '';
     return request('GET', `/picks${qs}`);

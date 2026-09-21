@@ -16,6 +16,10 @@ export default function AdminPanel() {
   const [creating, setCreating] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
 
+  const [oddsQuota, setOddsQuota] = useState(null);
+  const [refreshingOdds, setRefreshingOdds] = useState(false);
+  const [refreshMsg, setRefreshMsg] = useState('');
+
   const [pwError, setPwError] = useState('');
   // { userId, username, tempPassword } — the last temp password to hand off.
   // Only dismissed by an explicit click on the modal's Done button — never
@@ -29,11 +33,29 @@ export default function AdminPanel() {
   async function load() {
     setLoading(true);
     try {
-      const [inviteRes, userRes] = await Promise.all([api.getInvites(), api.getUsers()]);
+      const [inviteRes, userRes, quotaRes] = await Promise.all([
+        api.getInvites(), api.getUsers(), api.getOddsQuota(),
+      ]);
       setInvites(inviteRes.invites || []);
       setUsers(userRes.users || []);
+      setOddsQuota(quotaRes);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function refreshOdds() {
+    setRefreshingOdds(true);
+    setRefreshMsg('');
+    try {
+      const result = await api.refreshOdds();
+      setRefreshMsg(`Checked ${result.checked}, updated ${result.updated}.`);
+      const quotaRes = await api.getOddsQuota();
+      setOddsQuota(quotaRes);
+    } catch (err) {
+      setRefreshMsg(err.message);
+    } finally {
+      setRefreshingOdds(false);
     }
   }
 
@@ -91,6 +113,41 @@ export default function AdminPanel() {
 
   return (
     <div className="p-4 flex flex-col gap-6">
+      <div>
+        <p className="eyebrow mb-3">Odds API</p>
+        <div className="card p-3 flex flex-col gap-2">
+          {oddsQuota?.mockMode ? (
+            <p className="text-chalk-faint text-sm">No ODDS_API_KEY set — running on mock spreads.</p>
+          ) : oddsQuota?.quota ? (
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-chalk text-sm">
+                  <span className="font-semibold">{oddsQuota.quota.remaining}</span> credits remaining
+                  {oddsQuota.quota.used != null && (
+                    <span className="text-chalk-faint"> ({oddsQuota.quota.used} used this cycle)</span>
+                  )}
+                </p>
+                <p className="text-chalk-faint text-xs">
+                  as of {new Date(oddsQuota.quota.updatedAt).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-chalk-faint text-sm">No odds call has run yet this process — refresh to check.</p>
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={refreshOdds}
+              disabled={refreshingOdds || oddsQuota?.mockMode}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-navy-sink text-chalk-dim hover:text-chalk transition-colors disabled:opacity-50 flex-shrink-0"
+            >
+              {refreshingOdds ? '…' : 'Refresh odds now'}
+            </button>
+            {refreshMsg && <p className="text-chalk-faint text-xs">{refreshMsg}</p>}
+          </div>
+        </div>
+      </div>
+
       <div>
         <p className="eyebrow mb-3">User roles</p>
         {loading ? (
