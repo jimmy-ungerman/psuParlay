@@ -29,9 +29,10 @@ export async function fetchOddsApiGames() {
 }
 
 function parseOddsEvent(game) {
-  const bookmaker =
-    PREFERRED_BOOKS.map(k => game.bookmakers.find(b => b.key === k)).find(Boolean)
-    ?? game.bookmakers[0];
+  const preferredBookmakers = PREFERRED_BOOKS
+    .map(k => game.bookmakers.find(b => b.key === k))
+    .filter(Boolean);
+  const bookmaker = preferredBookmakers[0] ?? game.bookmakers[0];
 
   if (!bookmaker) return null;
 
@@ -44,13 +45,44 @@ function parseOddsEvent(game) {
   const totalsMarket = bookmaker.markets?.find(m => m.key === 'totals');
   const overOutcome = totalsMarket?.outcomes.find(o => o.name === 'Over');
 
+  const homeSpread = homeOutcome.point;
+
+  // Cross-check against any other preferred books also carrying this game. On
+  // low-liquidity games (FCS/D2 buy games) a single book can post a stale or
+  // reversed number with almost no action to correct it — if a sibling
+  // preferred book disagrees in sign or by an implausible margin, flag it
+  // rather than silently trusting whichever book happened to match first.
+  const otherSpreads = preferredBookmakers
+    .filter(b => b.key !== bookmaker.key)
+    .map(b => {
+      const outcome = b.markets
+        ?.find(m => m.key === 'spreads')
+        ?.outcomes.find(o => o.name === game.home_team);
+      return outcome ? { key: b.key, point: outcome.point } : null;
+    })
+    .filter(Boolean);
+
+  const disagreement = otherSpreads.find(
+    o => Math.sign(o.point) !== Math.sign(homeSpread) || Math.abs(o.point - homeSpread) > 7
+  );
+  const usedNonPreferredBook = !PREFERRED_BOOKS.includes(bookmaker.key);
+  const lowConfidence = usedNonPreferredBook || !!disagreement;
+
+  console.log(
+    `[odds] ${game.away_team} @ ${game.home_team}: ${bookmaker.key} spread=${homeSpread}` +
+    (otherSpreads.length ? `, other books: ${otherSpreads.map(o => `${o.key}=${o.point}`).join(', ')}` : '') +
+    (lowConfidence ? ' — LOW CONFIDENCE' : '')
+  );
+
   return {
     oddsApiId: game.id,
     homeTeam: game.home_team,
     awayTeam: game.away_team,
-    homeSpread: homeOutcome.point,
+    homeSpread,
     total: overOutcome?.point ?? null,
     commenceTime: game.commence_time,
+    lowConfidence,
+    bookmakerKey: bookmaker.key,
   };
 }
 
