@@ -42,8 +42,8 @@ router.post('/refresh-odds', requireAdmin, async (req, res) => {
 // GET /api/games/odds-quota — admin-only, most recent Odds API quota headers
 // seen by this process. Null until a real API call has happened (mock mode,
 // or a fresh process that hasn't hit the cron/manual refresh yet).
-router.get('/odds-quota', requireAdmin, (req, res) => {
-  res.json({ mockMode: isMockMode(), quota: getOddsQuota() });
+router.get('/odds-quota', requireAdmin, async (req, res) => {
+  res.json({ mockMode: isMockMode(), quota: await getOddsQuota() });
 });
 
 export default router;

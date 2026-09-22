@@ -108,3 +108,14 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, endpoint)
 );
+
+-- Single-row cache of the most recent Odds API quota headers. Lives in the
+-- shared DB rather than process memory so it survives pod restarts and stays
+-- consistent if there's ever more than one replica.
+CREATE TABLE IF NOT EXISTS odds_quota (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  remaining INTEGER NOT NULL,
+  used INTEGER,
+  last_cost INTEGER,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

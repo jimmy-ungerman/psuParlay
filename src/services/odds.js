@@ -1,4 +1,5 @@
 import axios from 'axios';
+import pool from '../db/index.js';
 
 const ODDS_API_BASE = 'https://api.the-odds-api.com/v4/sports/americanfootball_ncaaf';
 // Only trust these two — both are high-liquidity, sharp books. A game with
@@ -10,13 +11,20 @@ export function isMockMode() {
   return !process.env.ODDS_API_KEY;
 }
 
-// In-memory snapshot of the most recent quota headers The Odds API returned.
-// Only updated by an actual API call (there's no separate endpoint to poll
-// this), so it's null until the first request of the process's lifetime.
-let quotaState = null;
-
-export function getOddsQuota() {
-  return quotaState;
+// Reads back whatever The Odds API's response headers said on the most
+// recent successful call. Stored in the DB (not process memory) so it
+// survives pod restarts and stays consistent if there's more than one
+// replica — this is exactly the last response's numbers, nothing computed.
+export async function getOddsQuota() {
+  const { rows } = await pool.query(`SELECT * FROM odds_quota WHERE id = 1`);
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    remaining: row.remaining,
+    used: row.used,
+    lastCost: row.last_cost,
+    updatedAt: row.updated_at,
+  };
 }
 
 // Fetch current NCAAF spread odds from The Odds API.
@@ -36,12 +44,11 @@ export async function fetchOddsApiGames() {
   const used = res.headers['x-requests-used'];
   const lastCost = res.headers['x-requests-last'];
   if (remaining != null) {
-    quotaState = {
-      remaining: Number(remaining),
-      used: used != null ? Number(used) : null,
-      lastCost: lastCost != null ? Number(lastCost) : null,
-      updatedAt: new Date().toISOString(),
-    };
+    await pool.query(
+      `INSERT INTO odds_quota (id, remaining, used, last_cost, updated_at) VALUES (1, $1, $2, $3, CURRENT_TIMESTAMP)
+       ON CONFLICT (id) DO UPDATE SET remaining = excluded.remaining, used = excluded.used, last_cost = excluded.last_cost, updated_at = excluded.updated_at`,
+      [Number(remaining), used != null ? Number(used) : null, lastCost != null ? Number(lastCost) : null]
+    );
     console.log(`Odds API requests remaining: ${remaining}`);
   }
 
