@@ -4,7 +4,7 @@ const ODDS_API_BASE = 'https://api.the-odds-api.com/v4/sports/americanfootball_n
 // Only trust these two — both are high-liquidity, sharp books. A game with
 // no line from either (e.g. a P4-vs-FCS buy game) is skipped entirely
 // rather than falling back to a thinner book's number.
-const TRUSTED_BOOKS = ['draftkings', 'fanduel'];
+const TRUSTED_BOOKS = ['fanduel', 'draftkings'];
 
 export function isMockMode() {
   return !process.env.ODDS_API_KEY;
