@@ -81,12 +81,12 @@ async function seedWithMockSpreads(events, week, season) {
     const spread = generateMockSpread();
     const total = generateMockTotal();
     await pool.query(
-      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, total, commence_time, week_number, season, status, conference, home_rank, away_rank, low_confidence)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, total, commence_time, week_number, season, status, conference, home_rank, away_rank)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        ON CONFLICT (espn_id) DO UPDATE SET conference = excluded.conference WHERE games.conference IS NULL RETURNING id`,
       [event.espnId, event.homeTeam, event.awayTeam, event.homeAbbr, event.awayAbbr,
        spread, total, event.commenceTime, week, season, event.status, event.conference,
-       event.homeRank, event.awayRank, 0]
+       event.homeRank, event.awayRank]
     );
   }
 }
@@ -112,12 +112,12 @@ async function seedWithRealOdds(events, week, season) {
     const total = oddsGame.total ?? null;
 
     await pool.query(
-      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, total, commence_time, week_number, season, status, conference, home_rank, away_rank, low_confidence)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+      `INSERT INTO games (espn_id, home_team, away_team, home_abbr, away_abbr, home_spread, total, commence_time, week_number, season, status, conference, home_rank, away_rank)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        ON CONFLICT (espn_id) DO UPDATE SET conference = excluded.conference WHERE games.conference IS NULL RETURNING id`,
       [event.espnId, event.homeTeam, event.awayTeam, event.homeAbbr, event.awayAbbr,
        spread, total, event.commenceTime, week, season, event.status, event.conference,
-       event.homeRank, event.awayRank, oddsGame.lowConfidence ? 1 : 0]
+       event.homeRank, event.awayRank]
     );
   }
 }

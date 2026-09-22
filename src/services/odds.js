@@ -1,8 +1,10 @@
 import axios from 'axios';
 
 const ODDS_API_BASE = 'https://api.the-odds-api.com/v4/sports/americanfootball_ncaaf';
-// Bookmaker preference order
-const PREFERRED_BOOKS = ['draftkings', 'fanduel', 'bovada', 'betmgm'];
+// Only trust these two — both are high-liquidity, sharp books. A game with
+// no line from either (e.g. a P4-vs-FCS buy game) is skipped entirely
+// rather than falling back to a thinner book's number.
+const TRUSTED_BOOKS = ['fanduel', 'draftkings'];
 
 export function isMockMode() {
   return !process.env.ODDS_API_KEY;
@@ -47,12 +49,14 @@ export async function fetchOddsApiGames() {
 }
 
 function parseOddsEvent(game) {
-  const preferredBookmakers = PREFERRED_BOOKS
+  const bookmaker = TRUSTED_BOOKS
     .map(k => game.bookmakers.find(b => b.key === k))
-    .filter(Boolean);
-  const bookmaker = preferredBookmakers[0] ?? game.bookmakers[0];
+    .find(Boolean);
 
-  if (!bookmaker) return null;
+  if (!bookmaker) {
+    console.log(`[odds] ${game.away_team} @ ${game.home_team}: no DraftKings/FanDuel line, skipping`);
+    return null;
+  }
 
   const spreadsMarket = bookmaker.markets?.find(m => m.key === 'spreads');
   if (!spreadsMarket) return null;
@@ -63,43 +67,15 @@ function parseOddsEvent(game) {
   const totalsMarket = bookmaker.markets?.find(m => m.key === 'totals');
   const overOutcome = totalsMarket?.outcomes.find(o => o.name === 'Over');
 
-  const homeSpread = homeOutcome.point;
-
-  // Cross-check against any other preferred books also carrying this game. On
-  // low-liquidity games (FCS/D2 buy games) a single book can post a stale or
-  // reversed number with almost no action to correct it — if a sibling
-  // preferred book disagrees in sign or by an implausible margin, flag it
-  // rather than silently trusting whichever book happened to match first.
-  const otherSpreads = preferredBookmakers
-    .filter(b => b.key !== bookmaker.key)
-    .map(b => {
-      const outcome = b.markets
-        ?.find(m => m.key === 'spreads')
-        ?.outcomes.find(o => o.name === game.home_team);
-      return outcome ? { key: b.key, point: outcome.point } : null;
-    })
-    .filter(Boolean);
-
-  const disagreement = otherSpreads.find(
-    o => Math.sign(o.point) !== Math.sign(homeSpread) || Math.abs(o.point - homeSpread) > 7
-  );
-  const usedNonPreferredBook = !PREFERRED_BOOKS.includes(bookmaker.key);
-  const lowConfidence = usedNonPreferredBook || !!disagreement;
-
-  console.log(
-    `[odds] ${game.away_team} @ ${game.home_team}: ${bookmaker.key} spread=${homeSpread}` +
-    (otherSpreads.length ? `, other books: ${otherSpreads.map(o => `${o.key}=${o.point}`).join(', ')}` : '') +
-    (lowConfidence ? ' — LOW CONFIDENCE' : '')
-  );
+  console.log(`[odds] ${game.away_team} @ ${game.home_team}: ${bookmaker.key} spread=${homeOutcome.point}`);
 
   return {
     oddsApiId: game.id,
     homeTeam: game.home_team,
     awayTeam: game.away_team,
-    homeSpread,
+    homeSpread: homeOutcome.point,
     total: overOutcome?.point ?? null,
     commenceTime: game.commence_time,
-    lowConfidence,
     bookmakerKey: bookmaker.key,
   };
 }

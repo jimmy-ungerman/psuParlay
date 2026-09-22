@@ -132,18 +132,16 @@ export async function refreshRealSpreads() {
 
     const newSpread = match.homeSpread;
     const newTotal = match.total ?? null;
-    const newLowConfidence = match.lowConfidence ? 1 : 0;
     const spreadChanged = parseFloat(newSpread) !== parseFloat(game.home_spread);
     const totalChanged = newTotal !== null && parseFloat(newTotal) !== parseFloat(game.total);
-    const confidenceChanged = newLowConfidence !== (game.low_confidence ? 1 : 0);
 
-    if (!spreadChanged && !totalChanged && !confidenceChanged) continue;
+    if (!spreadChanged && !totalChanged) continue;
 
     await pool.query(
-      `UPDATE games SET home_spread = $1, total = $2, low_confidence = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4`,
-      [newSpread, newTotal, newLowConfidence, game.id]
+      `UPDATE games SET home_spread = $1, total = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`,
+      [newSpread, newTotal, game.id]
     );
-    console.log(`Odds updated: ${game.home_team} vs ${game.away_team}: spread ${game.home_spread} → ${newSpread}, total ${game.total} → ${newTotal}${newLowConfidence ? ' (LOW CONFIDENCE)' : ''}`);
+    console.log(`Odds updated: ${game.home_team} vs ${game.away_team}: spread ${game.home_spread} → ${newSpread}, total ${game.total} → ${newTotal}`);
     updated++;
   }
 
