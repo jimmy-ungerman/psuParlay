@@ -151,9 +151,9 @@ export default function History() {
                     const isTotalPick = pick.picked_team === 'over' || pick.picked_team === 'under';
                     const pickedTeam = isTotalPick ? null : (pick.picked_team === 'home' ? pick.home_team : pick.away_team);
                     const opponent = isTotalPick ? null : (pick.picked_team === 'home' ? pick.away_team : pick.home_team);
-                    // spread_at_pick is stored from the picked side's perspective
+                    // current_line is from the picked side's perspective
                     // (and is the total for over/under picks).
-                    const spread = parseFloat(pick.spread_at_pick);
+                    const spread = parseFloat(pick.current_line);
 
                     return (
                       <div key={pick.id} className="px-4 py-3 flex items-center justify-between gap-3">

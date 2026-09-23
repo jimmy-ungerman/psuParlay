@@ -56,6 +56,13 @@ export async function initDb() {
     db.exec(`ALTER TABLE picks ADD COLUMN note TEXT`);
   }
 
+  // Migration: drop spread_at_pick — grading/display now read the game's own
+  // line (games.home_spread/total), which is fluid until the pick deadline and
+  // frozen after, instead of a value snapshotted at pick time.
+  if (pickCols.some(c => c.name === 'spread_at_pick')) {
+    db.exec(`ALTER TABLE picks DROP COLUMN spread_at_pick`);
+  }
+
   // Clear phantom scores on games that haven't kicked off. ESPN's scoreboard
   // returns score "0" for scheduled games; older code stored that, making them
   // render as "Final 0-0". Only touch 'scheduled' — an 'in_progress' game has a

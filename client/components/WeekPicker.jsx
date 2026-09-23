@@ -283,12 +283,12 @@ export default function WeekPicker() {
             {myPick.picked_team === 'over' || myPick.picked_team === 'under' ? (
               <>
                 {myPick.picked_team === 'over' ? 'Over' : 'Under'}
-                <span className="font-mono text-cash-ink">{myPick.spread_at_pick}</span>
+                <span className="font-mono text-cash-ink">{myPick.current_line}</span>
               </>
             ) : (
               <>
                 {myPick.picked_team === 'home' ? myPick.home_team : myPick.away_team}
-                <span className="font-mono text-cash-ink">{formatSpread(myPick.spread_at_pick)}</span>
+                <span className="font-mono text-cash-ink">{formatSpread(myPick.current_line)}</span>
               </>
             )}
           </p>
