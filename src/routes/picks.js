@@ -45,6 +45,8 @@ router.get('/', requireAuth, async (req, res) => {
     // frozen after (scoreUpdater stops refreshing games.home_spread/total once
     // pickStillOpen goes false). Computed here so the slip/history views don't
     // duplicate the spread-vs-total perspective logic.
+    // e.g. pick Ole Miss +2.5 Wed, line moves to +3.5 Thu -> slip shows +3.5;
+    // Saturday's final pre-lock refresh sets it for good, and that's what grades it.
     for (const pick of picks) {
       pick.current_line = currentLine(pick, pick);
     }
