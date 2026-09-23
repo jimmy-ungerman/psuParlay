@@ -45,7 +45,6 @@ CREATE TABLE IF NOT EXISTS picks (
   week_number INTEGER NOT NULL,
   season INTEGER NOT NULL,
   picked_team TEXT NOT NULL,
-  spread_at_pick REAL NOT NULL,
   result TEXT DEFAULT 'pending',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, week_number, season)

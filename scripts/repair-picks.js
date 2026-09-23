@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // One-off repair for games that never got their final score (they dropped off
-// ESPN's default scoreboard before the score updater caught them) and whose
-// `home_spread` was left on a post-lock / in-game value by the old odds job.
+// ESPN's default scoreboard before the score updater caught them).
 //
 // For each unfinished game in the target week that has a pick:
 //   1. pull the real final from ESPN
-//   2. restore `home_spread` / `total` to the line the pick locked in
-//   3. mark the game complete and re-grade its pending picks off spread_at_pick
+//   2. mark the game complete and re-grade its pending picks off the game's
+//      current home_spread/total (frozen since the pick deadline by
+//      scoreUpdater's pickStillOpen gate — see src/services/results.js)
 //
 // Dry-run by default. Pass --commit to write.
 //
@@ -44,15 +44,6 @@ async function fetchFinal(espnId) {
   };
 }
 
-// Reverse a pick's locked line back to the home-team spread / game total.
-function lockedLineFromPick(pick) {
-  if (pick.picked_team === 'over' || pick.picked_team === 'under') {
-    return { total: parseFloat(pick.spread_at_pick) };
-  }
-  const s = parseFloat(pick.spread_at_pick);
-  return { home_spread: pick.picked_team === 'home' ? s : -s };
-}
-
 const db = new DatabaseSync(DB_PATH);
 const q = (sql, ...p) => db.prepare(sql).all(...p);
 
@@ -87,47 +78,23 @@ for (const game of games) {
 
   const picks = q(`SELECT * FROM picks WHERE game_id = ?`, game.id);
 
-  // Restore the line from the pick(s). One pick per game in the claim model;
-  // if several disagree, leave the spread alone and just note it.
-  const lines = picks.map(lockedLineFromPick);
-  const restore = {};
-  const spreads = [...new Set(lines.filter(l => l.home_spread != null).map(l => l.home_spread))];
-  const totals = [...new Set(lines.filter(l => l.total != null).map(l => l.total))];
-  if (spreads.length === 1) restore.home_spread = spreads[0];
-  if (totals.length === 1) restore.total = totals[0];
-  if (spreads.length > 1 || totals.length > 1) {
-    console.log(`  ! ${label} — picks disagree on the locked line, keeping current spread`);
-  }
-
   const newGame = {
     ...game,
     status: 'complete',
     home_score: final.homeScore,
     away_score: final.awayScore,
-    home_spread: restore.home_spread ?? game.home_spread,
-    total: restore.total ?? game.total,
   };
 
   gameUpdates.push(newGame);
 
-  const spreadNote =
-    restore.home_spread != null && restore.home_spread !== game.home_spread
-      ? `  (home_spread ${game.home_spread} → ${restore.home_spread})`
-      : '';
-  const totalNote =
-    restore.total != null && restore.total !== game.total
-      ? `  (total ${game.total} → ${restore.total})`
-      : '';
-  console.log(
-    `  ✓ ${label} — Final ${final.awayScore}-${final.homeScore}${spreadNote}${totalNote}`
-  );
+  console.log(`  ✓ ${label} — Final ${final.awayScore}-${final.homeScore}`);
 
   for (const pick of picks) {
     if (pick.result !== 'pending') continue;
     const result = calculateResult(pick, newGame);
     pickUpdates.push({ id: pick.id, result, pick, game: newGame });
     const who = q(`SELECT username FROM users WHERE id = ?`, pick.user_id)[0]?.username ?? `user ${pick.user_id}`;
-    console.log(`      ${who}: ${pick.picked_team} ${pick.spread_at_pick}  →  ${result.toUpperCase()}`);
+    console.log(`      ${who}: ${pick.picked_team} — ${result.toUpperCase()}`);
   }
 }
 
@@ -144,10 +111,10 @@ db.exec('BEGIN');
 try {
   const gStmt = db.prepare(
     `UPDATE games SET status = 'complete', home_score = ?, away_score = ?,
-       home_spread = ?, total = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+       updated_at = CURRENT_TIMESTAMP WHERE id = ?`
   );
   for (const g of gameUpdates) {
-    gStmt.run(g.home_score, g.away_score, g.home_spread, g.total, g.id);
+    gStmt.run(g.home_score, g.away_score, g.id);
   }
   const pStmt = db.prepare(`UPDATE picks SET result = ? WHERE id = ?`);
   for (const u of pickUpdates) {

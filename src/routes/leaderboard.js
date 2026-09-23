@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import pool from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
-import { coverMargin } from '../services/results.js';
+import { coverMargin, currentLine } from '../services/results.js';
 
 const router = Router();
 
@@ -28,8 +28,8 @@ function byStandings(a, b) {
 // selectable from the picks/users join). Same scale as historical_picks.spread_value.
 async function liveSpreadTotals({ keyExpr, joinUsers = false, whereSql = '', params = [] }) {
   const { rows } = await pool.query(
-    `SELECT ${keyExpr} AS k, p.picked_team, p.spread_at_pick,
-            g.home_score, g.away_score
+    `SELECT ${keyExpr} AS k, p.picked_team,
+            g.home_score, g.away_score, g.home_spread, g.total
      FROM picks p
      JOIN games g ON g.id = p.game_id
      ${joinUsers ? 'JOIN users u ON u.id = p.user_id' : ''}
@@ -252,7 +252,7 @@ router.get('/history', requireAuth, async (req, res) => {
     const history = await Promise.all(weeks.map(async ({ week_number, season }) => {
       const { rows: picks } = await pool.query(
         `SELECT p.*, u.username as display_name,
-                g.home_team, g.away_team, g.home_score, g.away_score, g.home_spread,
+                g.home_team, g.away_team, g.home_score, g.away_score, g.home_spread, g.total,
                 g.status as game_status
          FROM picks p
          JOIN users u ON p.user_id = u.id
@@ -261,6 +261,9 @@ router.get('/history', requireAuth, async (req, res) => {
          ORDER BY u.username`,
         [week_number, season]
       );
+      for (const pick of picks) {
+        pick.current_line = currentLine(pick, pick);
+      }
 
       const settled = picks.filter(p => p.result !== 'pending');
       const wins = picks.filter(p => p.result === 'win').length;

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import pool from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
-import { spreadForTeam, getPickDeadline } from '../services/results.js';
+import { getPickDeadline, currentLine } from '../services/results.js';
 import { ensureGamesSeededCached } from '../services/schedule.js';
 const router = Router();
 
@@ -31,7 +31,8 @@ router.get('/', requireAuth, async (req, res) => {
          u.username as display_name,
          g.home_team, g.away_team, g.home_abbr, g.away_abbr,
          g.commence_time, g.status as game_status,
-         g.home_score, g.away_score
+         g.home_score, g.away_score,
+         g.home_spread, g.total
        FROM picks p
        JOIN users u ON p.user_id = u.id
        JOIN games g ON p.game_id = g.id
@@ -39,6 +40,14 @@ router.get('/', requireAuth, async (req, res) => {
        ORDER BY p.created_at`,
       [week, season]
     );
+
+    // Same line calculateResult grades against: fluid until the pick deadline,
+    // frozen after (scoreUpdater stops refreshing games.home_spread/total once
+    // pickStillOpen goes false). Computed here so the slip/history views don't
+    // duplicate the spread-vs-total perspective logic.
+    for (const pick of picks) {
+      pick.current_line = currentLine(pick, pick);
+    }
 
     res.json({ picks, week: parseInt(week), season: parseInt(season) });
   } catch (err) {
@@ -88,17 +97,13 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'No total available for this game' });
     }
 
-    const spreadAtPick = (pickedTeam === 'over' || pickedTeam === 'under')
-      ? parseFloat(game.total)
-      : spreadForTeam(pickedTeam, parseFloat(game.home_spread));
-
     const { rows: pick } = await pool.query(
-      `INSERT INTO picks (user_id, game_id, week_number, season, picked_team, spread_at_pick, note)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO picks (user_id, game_id, week_number, season, picked_team, note)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (user_id, week_number, season)
-       DO UPDATE SET game_id = $2, picked_team = $5, spread_at_pick = $6, note = $7, result = 'pending', created_at = CURRENT_TIMESTAMP
+       DO UPDATE SET game_id = $2, picked_team = $5, note = $6, result = 'pending', created_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [req.user.userId, gameId, game.week_number, game.season, pickedTeam, spreadAtPick, note?.trim() || null]
+      [req.user.userId, gameId, game.week_number, game.season, pickedTeam, note?.trim() || null]
     );
 
     res.status(201).json({ pick: pick[0] });
