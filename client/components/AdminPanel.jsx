@@ -118,22 +118,37 @@ export default function AdminPanel() {
         <div className="card p-3 flex flex-col gap-2">
           {oddsQuota?.mockMode ? (
             <p className="text-chalk-faint text-sm">No ODDS_API_KEY set — running on mock spreads.</p>
-          ) : oddsQuota?.quota ? (
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-chalk text-sm">
-                  <span className="font-semibold">{oddsQuota.quota.remaining}</span> credits remaining
-                  {oddsQuota.quota.used != null && (
-                    <span className="text-chalk-faint"> ({oddsQuota.quota.used} used this cycle)</span>
-                  )}
-                </p>
-                <p className="text-chalk-faint text-xs">
-                  as of {new Date(oddsQuota.quota.updatedAt).toLocaleString()}
-                </p>
-              </div>
-            </div>
           ) : (
-            <p className="text-chalk-faint text-sm">No odds call has run yet this process — refresh to check.</p>
+            <>
+              {oddsQuota?.quota?.lastError && (
+                <div className="rounded-lg bg-red-950/40 border border-red-900/60 px-3 py-2">
+                  <p className="text-red-400 text-sm font-semibold">
+                    Odds API failing: {oddsQuota.quota.lastError.code || 'error'}
+                  </p>
+                  <p className="text-red-400/80 text-xs">{oddsQuota.quota.lastError.message}</p>
+                  <p className="text-red-400/60 text-xs">
+                    since {new Date(oddsQuota.quota.lastError.at).toLocaleString()} — new games aren't being seeded until this clears
+                  </p>
+                </div>
+              )}
+              {oddsQuota?.quota ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-chalk text-sm">
+                      <span className="font-semibold">{oddsQuota.quota.remaining}</span> credits remaining
+                      {oddsQuota.quota.used != null && (
+                        <span className="text-chalk-faint"> ({oddsQuota.quota.used} used this cycle)</span>
+                      )}
+                    </p>
+                    <p className="text-chalk-faint text-xs">
+                      as of {new Date(oddsQuota.quota.updatedAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-chalk-faint text-sm">No odds call has run yet this process — refresh to check.</p>
+              )}
+            </>
           )}
           <div className="flex items-center gap-2">
             <button

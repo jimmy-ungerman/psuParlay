@@ -109,6 +109,18 @@ export async function initDb() {
     db.exec(`ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0`);
   }
 
+  // Migration: track the Odds API's last failure (e.g. OUT_OF_USAGE_CREDITS)
+  // so it can be surfaced in the admin panel instead of only a server log line.
+  const oddsQuotaCols = db.prepare(`PRAGMA table_info(odds_quota)`).all();
+  if (oddsQuotaCols.length > 0 && !oddsQuotaCols.some(c => c.name === 'last_error_code')) {
+    db.exec(`ALTER TABLE odds_quota ADD COLUMN last_error_code TEXT`);
+    db.exec(`ALTER TABLE odds_quota ADD COLUMN last_error_message TEXT`);
+    db.exec(`ALTER TABLE odds_quota ADD COLUMN last_error_at DATETIME`);
+  }
+  if (oddsQuotaCols.length > 0 && !oddsQuotaCols.some(c => c.name === 'last_seed_attempt_at')) {
+    db.exec(`ALTER TABLE odds_quota ADD COLUMN last_seed_attempt_at DATETIME`);
+  }
+
   // Migration: consensus_votes table
   const cvTables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='consensus_votes'`).all();
   if (cvTables.length === 0) {

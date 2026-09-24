@@ -12,7 +12,8 @@ export function isMockMode() {
 }
 
 // Reads back whatever The Odds API's response headers said on the most
-// recent successful call. Stored in the DB (not process memory) so it
+// recent successful call, plus the most recent failure (if any hasn't been
+// cleared by a later success). Stored in the DB (not process memory) so it
 // survives pod restarts and stays consistent if there's more than one
 // replica — this is exactly the last response's numbers, nothing computed.
 export async function getOddsQuota() {
@@ -24,29 +25,85 @@ export async function getOddsQuota() {
     used: row.used,
     lastCost: row.last_cost,
     updatedAt: row.updated_at,
+    lastError: row.last_error_code
+      ? { code: row.last_error_code, message: row.last_error_message, at: row.last_error_at }
+      : null,
   };
+}
+
+// Records an Odds API call failure (e.g. quota exhausted) so it's visible in
+// the admin panel instead of only a server log line. Keeps whatever quota
+// numbers we last saw — this call didn't change them, the API rejected it
+// outright — falling back to 0 only if we've never had a successful call.
+async function recordOddsError(code, message) {
+  const { rows } = await pool.query(`SELECT remaining, used, last_cost FROM odds_quota WHERE id = 1`);
+  const prev = rows[0];
+  await pool.query(
+    `INSERT INTO odds_quota (id, remaining, used, last_cost, last_error_code, last_error_message, last_error_at)
+     VALUES (1, $1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+     ON CONFLICT (id) DO UPDATE SET last_error_code = excluded.last_error_code, last_error_message = excluded.last_error_message, last_error_at = excluded.last_error_at`,
+    [prev?.remaining ?? 0, prev?.used ?? null, prev?.last_cost ?? null, code, message]
+  );
+}
+
+// How often the *seeding* path (ensureGamesSeeded, called on every server
+// start and on a 6h/Monday cron in scoreUpdater.js, none of which are aware
+// of each other) is allowed to actually hit the paid endpoint. Without this,
+// a single week containing a game with no DraftKings/FanDuel line yet (a
+// buy game Vegas hasn't posted) stays "new" forever, so every startup and
+// every 6h tick re-fetches the whole slate just to re-confirm that one game
+// still isn't posted — silently burning credits the tuned refresh cadence
+// above never accounted for. This is independent of that cadence: it only
+// gates seeding, never the deliberate refresh/manual-refresh calls.
+const SEED_THROTTLE_MS = 60 * 60 * 1000;
+
+export async function canAttemptOddsSeed() {
+  const { rows } = await pool.query(`SELECT last_seed_attempt_at FROM odds_quota WHERE id = 1`);
+  const last = rows[0]?.last_seed_attempt_at;
+  if (!last) return true;
+  // SQLite's CURRENT_TIMESTAMP is UTC but stored without a timezone suffix
+  // ("YYYY-MM-DD HH:MM:SS") — without appending Z, Date parses it as local
+  // time and the throttle math comes out wrong by the server's UTC offset.
+  const lastMs = new Date(`${last.replace(' ', 'T')}Z`).getTime();
+  return Date.now() - lastMs >= SEED_THROTTLE_MS;
+}
+
+export async function recordOddsSeedAttempt() {
+  await pool.query(
+    `INSERT INTO odds_quota (id, remaining, last_seed_attempt_at) VALUES (1, 0, CURRENT_TIMESTAMP)
+     ON CONFLICT (id) DO UPDATE SET last_seed_attempt_at = excluded.last_seed_attempt_at`
+  );
 }
 
 // Fetch current NCAAF spread odds from The Odds API.
 // Returns games with real home_spread values.
 export async function fetchOddsApiGames() {
-  const res = await axios.get(`${ODDS_API_BASE}/odds/`, {
-    params: {
-      apiKey: process.env.ODDS_API_KEY,
-      regions: 'us',
-      markets: 'spreads,totals',
-      oddsFormat: 'american',
-    },
-    timeout: 10000,
-  });
+  let res;
+  try {
+    res = await axios.get(`${ODDS_API_BASE}/odds/`, {
+      params: {
+        apiKey: process.env.ODDS_API_KEY,
+        regions: 'us',
+        markets: 'spreads,totals',
+        oddsFormat: 'american',
+      },
+      timeout: 10000,
+    });
+  } catch (err) {
+    const code = err.response?.data?.error_code ?? null;
+    const message = err.response?.data?.message ?? err.message;
+    await recordOddsError(code, message);
+    throw err;
+  }
 
   const remaining = res.headers['x-requests-remaining'];
   const used = res.headers['x-requests-used'];
   const lastCost = res.headers['x-requests-last'];
   if (remaining != null) {
     await pool.query(
-      `INSERT INTO odds_quota (id, remaining, used, last_cost, updated_at) VALUES (1, $1, $2, $3, CURRENT_TIMESTAMP)
-       ON CONFLICT (id) DO UPDATE SET remaining = excluded.remaining, used = excluded.used, last_cost = excluded.last_cost, updated_at = excluded.updated_at`,
+      `INSERT INTO odds_quota (id, remaining, used, last_cost, updated_at, last_error_code, last_error_message, last_error_at)
+       VALUES (1, $1, $2, $3, CURRENT_TIMESTAMP, NULL, NULL, NULL)
+       ON CONFLICT (id) DO UPDATE SET remaining = excluded.remaining, used = excluded.used, last_cost = excluded.last_cost, updated_at = excluded.updated_at, last_error_code = NULL, last_error_message = NULL, last_error_at = NULL`,
       [Number(remaining), used != null ? Number(used) : null, lastCost != null ? Number(lastCost) : null]
     );
     console.log(`Odds API requests remaining: ${remaining}`);
