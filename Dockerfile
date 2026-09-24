@@ -1,5 +1,5 @@
 # Stage 1: build the React frontend
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package.json .
 RUN npm install
@@ -10,7 +10,7 @@ RUN npm run build
 RUN npm prune --production
 
 # Stage 2: lean runtime image
-FROM node:24-alpine
+FROM node:26-alpine
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
