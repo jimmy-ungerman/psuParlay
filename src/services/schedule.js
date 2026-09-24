@@ -1,10 +1,12 @@
 import pool from '../db/index.js';
 import { getActiveWeekGames } from './espn.js';
 import {
+  canAttemptOddsSeed,
   fetchOddsApiGames,
   generateMockSpread,
   generateMockTotal,
   isMockMode,
+  recordOddsSeedAttempt,
   teamsMatch,
 } from './odds.js';
 
@@ -92,12 +94,29 @@ async function seedWithMockSpreads(events, week, season) {
 }
 
 async function seedWithRealOdds(events, week, season) {
+  // ensureGamesSeeded runs on every server start plus a 6h/Monday cron, none
+  // of which coordinate with each other — without this, a single game with
+  // no trusted-book line yet stays "new" forever and every one of those
+  // triggers re-fetches the whole slate just to recheck it. Throttled
+  // instead of per-call so it holds across restarts and replicas.
+  if (!(await canAttemptOddsSeed())) {
+    console.log('Skipping real-odds seed — checked recently, still waiting on the throttle window');
+    return;
+  }
+  await recordOddsSeedAttempt();
+
   let oddsGames;
   try {
     oddsGames = await fetchOddsApiGames();
   } catch (err) {
-    console.error('Odds API failed, falling back to mock spreads:', err.message);
-    return seedWithMockSpreads(events, week, season);
+    // Leave these events unseeded rather than falling back to mock spreads —
+    // a mock spread for e.g. a P4 team vs. a buy-game opponent looks just as
+    // plausible as a real line and would never get corrected (a game like
+    // that legitimately has no trusted-book line, so refreshRealSpreads can
+    // never match it back to a real one). They'll seed for real once the
+    // API call succeeds again.
+    console.error('Odds API failed, leaving new games unseeded until lines are available:', err.message);
+    return;
   }
 
   for (const event of events) {
