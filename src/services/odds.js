@@ -144,9 +144,23 @@ function parseOddsEvent(game) {
   };
 }
 
+// Schools whose name changed and where a data source hasn't caught up yet.
+// Sam Houston dropped "State" in its 2023 rebrand — ESPN uses the new name,
+// but The Odds API still reports it as "Sam Houston State Bearkats". The
+// substring check in teamsMatch can't bridge this: "state" sits in the
+// middle of the string, so neither name contains the other. Don't try to
+// generically strip "state" instead — that would collide real distinct
+// schools (Iowa/Iowa State, Oregon/Oregon State, Michigan/Michigan State...),
+// the same trap the import scripts' SCHOOL_QUALIFIERS list guards against.
+const TEAM_ALIASES = {
+  'sam houston state bearkats': 'sam houston bearkats',
+  'sam houston state': 'sam houston',
+};
+
 // Normalize a team name for fuzzy matching between APIs
 export function normalizeTeam(name) {
-  return name.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+  const normalized = name.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+  return TEAM_ALIASES[normalized] ?? normalized;
 }
 
 export function teamsMatch(a, b) {
