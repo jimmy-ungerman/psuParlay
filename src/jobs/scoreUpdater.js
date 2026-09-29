@@ -4,7 +4,10 @@ import { fetchLiveScores } from '../services/espn.js';
 import { calculateResult, getPickDeadline } from '../services/results.js';
 import { fetchOddsApiGames, fluctuateSpread, isMockMode, teamsMatch } from '../services/odds.js';
 import { ensureGamesSeeded } from '../services/schedule.js';
-// Every 5 min: update scores and resolve picks (keeps the slip's live scores current)
+// Saturday 10 AM ET through Sunday 7 AM ET: update scores and resolve picks
+// every 5 min (keeps the slip's live scores current). Games are Saturday-only
+// (see CLAUDE.md), so there's nothing live outside this window — the Sunday
+// tail covers a late West Coast kickoff running past midnight ET.
 // Every 12 hours: refresh spreads from The Odds API (or simulate movement in mock mode)
 // Saturday 11:29 AM ET: final spread snapshot just before picks close
 // Spreads are never refreshed once a game's pick deadline has passed, so the
@@ -14,9 +17,11 @@ import { ensureGamesSeeded } from '../services/schedule.js';
 // tier (each call costs ~2 credits for spreads+totals @ 1 region) — running
 // every 4 hours burned through the monthly quota before the season did.
 export function startScoreUpdater() {
-  schedule('*/5 * * * *', async () => {
+  const runScores = async () => {
     try { await updateScores(); } catch (err) { console.error('Score update error:', err.message); }
-  });
+  };
+  schedule('*/5 10-23 * * 6', runScores, { timezone: 'America/New_York' });
+  schedule('*/5 0-6 * * 0', runScores, { timezone: 'America/New_York' });
 
   schedule('0 */12 * * *', async () => {
     try {
@@ -52,7 +57,7 @@ export function startScoreUpdater() {
     ensureGamesSeeded().catch(err => console.error('Periodic week-seed error:', err.message));
   });
 
-  console.log('Score updater scheduled (scores: every 5 min, spreads: every 12 hours + Saturday 11:29 AM ET; week seed: Monday 6:15 AM ET + every 6h)');
+  console.log('Score updater scheduled (scores: every 5 min Sat 10 AM ET – Sun 7 AM ET, spreads: every 12 hours + Saturday 11:29 AM ET; week seed: Monday 6:15 AM ET + every 6h)');
 }
 
 // A spread should only move while the pick is still open. Once the deadline
