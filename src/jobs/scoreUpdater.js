@@ -4,6 +4,7 @@ import { fetchLiveScores } from '../services/espn.js';
 import { calculateResult, getPickDeadline } from '../services/results.js';
 import { fetchOddsApiGames, fluctuateSpread, isMockMode, teamsMatch } from '../services/odds.js';
 import { ensureGamesSeeded } from '../services/schedule.js';
+import { recordJobFailure, recordJobSuccess } from '../services/healthState.js';
 // Saturday 10 AM ET through Sunday 7 AM ET: update scores and resolve picks
 // every 5 min (keeps the slip's live scores current). Games are Saturday-only
 // (see CLAUDE.md), so there's nothing live outside this window — the Sunday
@@ -18,7 +19,13 @@ import { ensureGamesSeeded } from '../services/schedule.js';
 // every 4 hours burned through the monthly quota before the season did.
 export function startScoreUpdater() {
   const runScores = async () => {
-    try { await updateScores(); } catch (err) { console.error('Score update error:', err.message); }
+    try {
+      await updateScores();
+      recordJobSuccess('scores');
+    } catch (err) {
+      recordJobFailure('scores', err);
+      console.error('Score update error:', err.message);
+    }
   };
   schedule('*/5 10-23 * * 6', runScores, { timezone: 'America/New_York' });
   schedule('*/5 0-6 * * 0', runScores, { timezone: 'America/New_York' });
@@ -30,7 +37,11 @@ export function startScoreUpdater() {
       } else {
         await refreshRealSpreads();
       }
-    } catch (err) { console.error('Spread update error:', err.message); }
+      recordJobSuccess('spreads');
+    } catch (err) {
+      recordJobFailure('spreads', err);
+      console.error('Spread update error:', err.message);
+    }
   });
 
   // Final spread update at 11:29 AM ET every Saturday — the last refresh before
@@ -43,21 +54,34 @@ export function startScoreUpdater() {
       } else {
         await refreshRealSpreads();
       }
-    } catch (err) { console.error('Final spread update error:', err.message); }
+      recordJobSuccess('spreads');
+    } catch (err) {
+      recordJobFailure('spreads', err);
+      console.error('Final spread update error:', err.message);
+    }
   }, { timezone: 'America/New_York' });
 
   // Advance the games table to the new week just after the Monday 6 AM ET
   // rollover, and keep it topped up through the day, so the app moves on to the
   // next slate without waiting for someone to open the Pick tab.
   schedule('15 6 * * 1', () => {
-    ensureGamesSeeded().catch(err => console.error('Monday week-seed error:', err.message));
+    runWeekSeed('Monday week-seed error:');
   }, { timezone: 'America/New_York' });
 
   schedule('0 */6 * * *', () => {
-    ensureGamesSeeded().catch(err => console.error('Periodic week-seed error:', err.message));
+    runWeekSeed('Periodic week-seed error:');
   });
 
   console.log('Score updater scheduled (scores: every 5 min Sat 10 AM ET – Sun 7 AM ET, spreads: every 12 hours + Saturday 11:29 AM ET; week seed: Monday 6:15 AM ET + every 6h)');
+}
+
+function runWeekSeed(label) {
+  ensureGamesSeeded()
+    .then(() => recordJobSuccess('seeding'))
+    .catch(err => {
+      recordJobFailure('seeding', err);
+      console.error(label, err.message);
+    });
 }
 
 // A spread should only move while the pick is still open. Once the deadline

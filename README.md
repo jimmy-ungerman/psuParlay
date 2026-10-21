@@ -61,6 +61,25 @@ npm run build   # builds frontend to dist/
 npm start       # serves everything from Express
 ```
 
+### Kubernetes probes
+
+Unauthenticated endpoints on the Express port (default `3001`). They do not call ESPN or The Odds API.
+
+- `GET /healthz` and `GET /api/health` — liveness. `200` when the process can respond.
+- `GET /readyz` — readiness. `200` when SQLite answers, `503` when it does not.
+- `GET /api/status` — pod status. `503` only when the database check fails. `200` with `"status": "degraded"` when the last score update, spread refresh, or week seed failed. Job timestamps only; odds quota and exception text stay off this route.
+
+```yaml
+livenessProbe:
+  httpGet: { path: /healthz, port: 3001 }
+  periodSeconds: 20
+readinessProbe:
+  httpGet: { path: /readyz, port: 3001 }
+  periodSeconds: 10
+```
+
+Use `/api/status` from a port-forward. It is not a probe that should restart the pod.
+
 ### First Run
 
 The first user to register becomes the admin. Everyone else needs an invite link — admins can generate these from the Admin panel.
