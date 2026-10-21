@@ -1,6 +1,6 @@
 {
   "name": "psu-parlay",
-  "version": "3.7.2",
+  "version": "3.8.0",
   "type": "module",
   "scripts": {
     "build": "vite build",
