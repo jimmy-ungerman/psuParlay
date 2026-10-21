@@ -67,7 +67,7 @@ Unauthenticated endpoints on the Express port (default `3001`). They do not call
 
 - `GET /healthz` and `GET /api/health` — liveness. `200` when the process can respond.
 - `GET /readyz` — readiness. `200` when SQLite answers, `503` when it does not.
-- `GET /api/status` — pod status for debugging. `503` only when the database check fails. `200` with `"status": "degraded"` when the last score update, spread refresh, or week seed failed.
+- `GET /api/status` — pod status. `503` only when the database check fails. `200` with `"status": "degraded"` when the last score update, spread refresh, or week seed failed. Job timestamps only; odds quota and exception text stay off this route.
 
 ```yaml
 livenessProbe:

@@ -66,18 +66,8 @@ describe('GET /api/status', () => {
     assert.deepEqual(Object.keys(body.checks.jobs).sort(), ['scores', 'seeding', 'spreads']);
   });
 
-  test('reports mock odds with no quota row', async () => {
-    const { body } = await get('/api/status');
-    assert.deepEqual(body.checks.odds, { mode: 'mock', remaining: null, lastError: null });
-  });
-
-  test('reports live odds mode when ODDS_API_KEY is set', async () => {
+  test('does not expose odds mode, quota, or vendor errors', async () => {
     process.env.ODDS_API_KEY = 'test-key';
-    const { body } = await get('/api/status');
-    assert.equal(body.checks.odds.mode, 'live');
-  });
-
-  test('reports the stored quota and last odds error', async () => {
     query(
       `INSERT INTO odds_quota (id, remaining, used, last_cost, last_error_code, last_error_message, last_error_at)
        VALUES (1, 42, 458, 2, $1, $2, $3)`,
@@ -85,19 +75,23 @@ describe('GET /api/status', () => {
     );
     const { status, body } = await get('/api/status');
     assert.equal(status, 200);
-    assert.equal(body.checks.odds.remaining, 42);
-    assert.deepEqual(body.checks.odds.lastError, {
-      code: 'OUT_OF_USAGE_CREDITS',
-      message: 'Usage quota has been reached',
-      at: '2026-10-17 15:00:00',
-    });
+    assert.equal(body.checks.odds, undefined);
+    const serialized = JSON.stringify(body);
+    assert.equal(serialized.includes('test-key'), false);
+    assert.equal(serialized.includes('OUT_OF_USAGE_CREDITS'), false);
+    assert.equal(serialized.includes('Usage quota has been reached'), false);
+    assert.equal(serialized.includes('live'), false);
+    assert.equal(serialized.includes('mock'), false);
   });
 
-  test('stays 200 but reports degraded when a job last failed', async () => {
+  test('stays 200 but reports degraded without the job exception text', async () => {
     recordJobFailure('spreads', new Error('quota exhausted'));
     const { status, body } = await get('/api/status');
     assert.equal(status, 200);
     assert.equal(body.status, 'degraded');
-    assert.equal(body.checks.jobs.spreads.lastError, 'quota exhausted');
+    assert.equal(body.checks.jobs.spreads.lastSuccessAt, null);
+    assert.equal(typeof body.checks.jobs.spreads.lastErrorAt, 'string');
+    assert.equal('lastError' in body.checks.jobs.spreads, false);
+    assert.equal(JSON.stringify(body).includes('quota exhausted'), false);
   });
 });
