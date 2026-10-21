@@ -5,3 +5,7 @@ data/
 *.local
 .claude/
 Claude*
+.cursor/*
+!.cursor/BUGBOT.md
+!.cursor/config/
+!.cursor/config/bugbot.yaml

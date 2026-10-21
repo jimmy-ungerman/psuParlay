@@ -1,0 +1,19 @@
+# Read from main, not the PR branch. Settings here override the dashboard
+# except for a PR author's personal overrides. autofix.mode can only
+# lower the dashboard setting, not turn Autofix on.
+version: 1
+
+triggers:
+  drafts: false
+  frequency: everyPush
+
+review:
+  effort: default
+  incremental: true
+
+prSummary:
+  mode: comment
+  riskScore: true
+
+autofix:
+  mode: disabled
