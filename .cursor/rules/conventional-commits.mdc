@@ -1,0 +1,39 @@
+---
+description: Use Conventional Commits for every commit in this repo
+alwaysApply: true
+---
+
+# Conventional Commits
+
+Every commit message in this repo uses Conventional Commits. semantic-release on `main` reads the subject to pick the version bump.
+
+```
+type(scope): subject
+```
+
+`scope` is optional. Subject is imperative, lowercase, and has no trailing period. Put the reason in the body when the subject is not enough.
+
+```
+fix: persist odds API quota to the DB instead of process memory
+
+The in-memory counter reset on every pod restart, so the admin panel
+showed an empty quota after each deploy.
+```
+
+Types that ship a release:
+
+- `feat` — minor
+- `fix`, `perf`, `revert` — patch
+- `chore(deps)` — patch. Other `chore` commits do not release.
+
+A breaking change is a major bump. Mark it with `!` after the type, and add a `BREAKING CHANGE:` footer:
+
+```
+feat!: grade picks off the locked line
+
+BREAKING CHANGE: picks no longer store spread_at_pick.
+```
+
+These types are valid and do not bump the version: `docs`, `style`, `refactor`, `test`, `build`, `ci`, and `chore` without the `deps` scope.
+
+Do not write `chore(release):` commits. semantic-release creates those.
