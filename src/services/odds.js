@@ -55,7 +55,12 @@ async function recordOddsError(code, message) {
 // still isn't posted — silently burning credits the tuned refresh cadence
 // above never accounted for. This is independent of that cadence: it only
 // gates seeding, never the deliberate refresh/manual-refresh calls.
-const SEED_THROTTLE_MS = 60 * 60 * 1000;
+//
+// 11h rather than 12h so the 6h cron's 00:00 and 12:00 ticks both pass while
+// the 06:00 and 18:00 ticks are skipped: at most ~2 seed calls (4 credits) a
+// day. An hourly window let a permanently unlined buy game burn ~48 credits
+// a day and exhaust the 500/month tier in under two weeks.
+export const SEED_THROTTLE_MS = 11 * 60 * 60 * 1000;
 
 export async function canAttemptOddsSeed() {
   const { rows } = await pool.query(`SELECT last_seed_attempt_at FROM odds_quota WHERE id = 1`);
