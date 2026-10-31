@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { liveness, readiness, status } from './routes/health.js';
+import { registry } from './services/metrics.js';
 import authRoutes from './routes/auth.js';
 import inviteRoutes from './routes/invites.js';
 import gameRoutes from './routes/games.js';
@@ -41,6 +42,10 @@ app.get('/healthz', liveness);
 app.get('/readyz', readiness);
 app.get('/api/health', liveness);
 app.get('/api/status', status);
+app.get('/metrics', async (_req, res) => {
+  res.set('Content-Type', registry.contentType);
+  res.send(await registry.metrics());
+});
 
 // Serve the built frontend
 const distDir = join(__dirname, '../dist');
