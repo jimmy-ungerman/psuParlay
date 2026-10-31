@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import pool from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { currentLine } from '../services/results.js';
 
 const router = Router();
+
+const CURRENT_SEASON = new Date().getFullYear();
 
 // GET /api/stats/parlay-record
 // Returns week-by-week parlay outcomes and all-time totals
@@ -99,6 +102,62 @@ router.get('/h2h/:userId', requireAuth, async (req, res) => {
       opponent: theirInfo[0].username,
       wins, losses, ties,
       weeks: rows,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/stats/picks/:userId?season=
+// Returns one player's picks for a season, week by week, with results
+router.get('/picks/:userId', requireAuth, async (req, res) => {
+  const userId = parseInt(req.params.userId);
+  const season = parseInt(req.query.season || CURRENT_SEASON);
+  if (!Number.isInteger(userId) || !Number.isInteger(season)) {
+    return res.status(400).json({ error: 'Invalid user or season' });
+  }
+
+  try {
+    const { rows: userRows } = await pool.query(
+      'SELECT id, username FROM users WHERE id = $1', [userId]
+    );
+    if (userRows.length === 0) return res.status(404).json({ error: 'User not found' });
+    const { username } = userRows[0];
+
+    const isHistorical = season < CURRENT_SEASON;
+    let picks;
+
+    if (isHistorical) {
+      ({ rows: picks } = await pool.query(
+        `SELECT hp.id, hp.week_number, hp.result, hp.spread_value, hp.picked_team, hp.canonical_team,
+                g.home_team, g.away_team, g.home_score, g.away_score, g.status as game_status
+         FROM historical_picks hp
+         LEFT JOIN games g ON hp.game_id = g.id
+         WHERE hp.season = $1 AND (hp.user_id = $2 OR hp.display_name = $3)
+         ORDER BY hp.week_number DESC`,
+        [season, userId, username]
+      ));
+    } else {
+      ({ rows: picks } = await pool.query(
+        `SELECT p.*, g.home_team, g.away_team, g.home_score, g.away_score, g.home_spread, g.total,
+                g.status as game_status
+         FROM picks p
+         JOIN games g ON p.game_id = g.id
+         WHERE p.user_id = $1 AND p.season = $2
+         ORDER BY p.week_number DESC`,
+        [userId, season]
+      ));
+      for (const pick of picks) pick.current_line = currentLine(pick, pick);
+    }
+
+    const count = (r) => picks.filter(p => p.result === r).length;
+    res.json({
+      user: { id: userRows[0].id, username },
+      season,
+      is_historical: isHistorical,
+      record: { wins: count('win'), losses: count('loss'), pushes: count('push'), pending: count('pending') },
+      picks,
     });
   } catch (err) {
     console.error(err);
