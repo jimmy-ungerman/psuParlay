@@ -80,6 +80,34 @@ readinessProbe:
 
 Use `/api/status` from a port-forward. It is not a probe that should restart the pod.
 
+### Prometheus metrics
+
+`GET /metrics` on the Express port, unauthenticated like the probes. It does not call ESPN or The Odds API. Odds API state is read from the `odds_quota` table at scrape time. Quota numbers and exception text are not exposed.
+
+| Metric | Meaning |
+| --- | --- |
+| `psuparlay_odds_api_last_call_ok` | `0` while the most recent Odds API call is failing (bad key, quota exhausted, outage), `1` after a success. Absent in mock mode. |
+| `psuparlay_odds_api_last_error_info{error_code}` | `1` with the Odds API error code (e.g. `INVALID_KEY`, `OUT_OF_USAGE_CREDITS`) while failing. |
+| `psuparlay_odds_api_last_success_timestamp_seconds` | Unix time of the last successful call. |
+| `psuparlay_odds_api_mock_mode` | `1` when `ODDS_API_KEY` is unset. |
+| `psuparlay_job_last_{success,error}_timestamp_seconds{job}` | Per-pod background job timestamps. |
+
+Example alert:
+
+```yaml
+- alert: OddsApiFailing
+  expr: psuparlay_odds_api_last_call_ok == 0
+  for: 5m
+  labels: { severity: warning }
+  annotations:
+    summary: "Odds API calls failing ({{ $labels.error_code }})"
+- alert: OddsApiMockModeInProd
+  expr: psuparlay_odds_api_mock_mode == 1
+  for: 15m
+```
+
+The call only happens every few hours, so the alert stays firing until the next successful refresh (or an admin manual refresh) clears the error.
+
 ### First Run
 
 The first user to register becomes the admin. Everyone else needs an invite link — admins can generate these from the Admin panel.

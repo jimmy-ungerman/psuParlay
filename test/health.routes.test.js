@@ -95,3 +95,40 @@ describe('GET /api/status', () => {
     assert.equal(JSON.stringify(body).includes('quota exhausted'), false);
   });
 });
+
+describe('GET /metrics', () => {
+  async function metrics() {
+    const res = await fetch(`${server.baseUrl}/metrics`);
+    return { status: res.status, text: await res.text() };
+  }
+
+  afterEach(() => {
+    delete process.env.ODDS_API_KEY;
+  });
+
+  test('reports mock mode without an Odds API key', async () => {
+    const { status, text } = await metrics();
+    assert.equal(status, 200);
+    assert.match(text, /^psuparlay_odds_api_mock_mode 1$/m);
+    assert.doesNotMatch(text, /^psuparlay_odds_api_last_call_ok\s/m);
+  });
+
+  test('reports a failing Odds API call with its error code', async () => {
+    process.env.ODDS_API_KEY = 'bad';
+    query(`INSERT INTO odds_quota (id, remaining, last_error_code, last_error_message, last_error_at)
+           VALUES (1, 0, 'INVALID_KEY', 'secret detail', CURRENT_TIMESTAMP)`);
+    const { text } = await metrics();
+    assert.match(text, /^psuparlay_odds_api_last_call_ok 0$/m);
+    assert.match(text, /^psuparlay_odds_api_last_error_info\{error_code="INVALID_KEY"\} 1$/m);
+    assert.doesNotMatch(text, /secret detail/);
+  });
+
+  test('reports ok after a successful call', async () => {
+    process.env.ODDS_API_KEY = 'good';
+    query(`INSERT INTO odds_quota (id, remaining, used, updated_at) VALUES (1, 400, 100, CURRENT_TIMESTAMP)`);
+    const { text } = await metrics();
+    assert.match(text, /^psuparlay_odds_api_last_call_ok 1$/m);
+    assert.match(text, /^psuparlay_odds_api_last_success_timestamp_seconds \d/m);
+    assert.doesNotMatch(text, /last_error_info\{/);
+  });
+});
