@@ -19,7 +19,9 @@ export async function ensureGamesSeededCached() {
   const now = Date.now();
   if (seedCache && now < seedCache.expiresAt) return seedCache.result;
   if (!seedingPromise) {
-    seedingPromise = ensureGamesSeeded()
+    // Page loads must never spend paid odds credits; the boot seed and the
+    // cron do that.
+    seedingPromise = ensureGamesSeeded({ fetchRealOdds: false })
       .then(result => {
         seedCache = { result, expiresAt: Date.now() + 5 * 60 * 1000 };
         seedingPromise = null;
@@ -33,7 +35,7 @@ export async function ensureGamesSeededCached() {
   return seedingPromise;
 }
 
-export async function ensureGamesSeeded() {
+export async function ensureGamesSeeded({ fetchRealOdds = true } = {}) {
   const { season, week, events } = await getActiveWeekGames();
   if (events.length === 0) return { season, week };
 
@@ -71,7 +73,7 @@ export async function ensureGamesSeeded() {
 
   if (isMockMode()) {
     await seedWithMockSpreads(newEvents, week, season);
-  } else {
+  } else if (fetchRealOdds) {
     await seedWithRealOdds(newEvents, week, season);
   }
 
