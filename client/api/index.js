@@ -58,6 +58,7 @@ export const api = {
   getUsers: () => request('GET', '/users'),
   getParlayRecord: () => request('GET', '/stats/parlay-record'),
   getH2H: (userId) => request('GET', `/stats/h2h/${userId}`),
+  getPlayerPicks: (userId, season) => request('GET', `/stats/picks/${userId}${season ? `?season=${season}` : ''}`),
 
   // Consensus PSU vote
   getConsensus: (week, season) => request('GET', `/consensus?week=${week}&season=${season}`),

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../api/index.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import HeadToHead from './HeadToHead.jsx';
+import PlayerPicks from './PlayerPicks.jsx';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -26,6 +27,7 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [h2hUserId, setH2hUserId] = useState(null);
+  const [pickUser, setPickUser] = useState(null);
 
   useEffect(() => {
     api.getSeasons().then(res => {
@@ -39,6 +41,7 @@ export default function Leaderboard() {
     async function load() {
       setLoading(true);
       setH2hUserId(null);
+      setPickUser(null);
       try {
         const res = await api.getLeaderboard(season);
         setData(res.leaderboard || []);
@@ -51,7 +54,24 @@ export default function Leaderboard() {
     load();
   }, [season]);
 
-  const isHistorical = season !== String(CURRENT_YEAR) && season !== 'all';
+  const isAllTime = season === 'all';
+
+  if (pickUser) {
+    return (
+      <div className="p-4">
+        <PlayerPicks
+          userId={pickUser.id}
+          season={season}
+          isMe={pickUser.isMe}
+          onBack={() => setPickUser(null)}
+          onH2H={() => setH2hUserId(pickUser.id)}
+        />
+        {h2hUserId && (
+          <HeadToHead userId={h2hUserId} onClose={() => setH2hUserId(null)} />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 flex flex-col gap-4">
@@ -89,12 +109,12 @@ export default function Leaderboard() {
               ? formatSpread(entry.spread_total)
               : null;
             const spreadUp = parseFloat(entry.spread_total) >= 0;
-            const tappable = !isMe && !isHistorical && entry.id;
+            const tappable = !isAllTime && entry.id;
 
             return (
               <button
                 key={entry.display_name}
-                onClick={() => tappable && setH2hUserId(entry.id)}
+                onClick={() => tappable && setPickUser({ id: entry.id, isMe })}
                 disabled={!tappable}
                 className={`w-full text-left grid grid-cols-[1.5rem_1fr_auto] items-center gap-3 border-t border-line-soft first:border-t-0 py-3 transition-colors ${
                   isMe
@@ -152,8 +172,8 @@ export default function Leaderboard() {
         </div>
       )}
 
-      {!isHistorical && data.length > 0 && (
-        <p className="text-center text-chalk-faint text-xs">Tap anyone to see your head-to-head</p>
+      {!isAllTime && data.length > 0 && (
+        <p className="text-center text-chalk-faint text-xs">Tap anyone to see their picks</p>
       )}
 
       {h2hUserId && (

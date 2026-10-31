@@ -123,7 +123,7 @@ router.get('/', requireAuth, async (req, res) => {
     } else if (parseInt(seasonParam) < CURRENT_SEASON) {
       // Historical season
       const { rows } = await pool.query(
-        `SELECT display_name,
+        `SELECT display_name, MAX(user_id) as id,
                 COUNT(*) FILTER (WHERE result = 'win')  as wins,
                 COUNT(*) FILTER (WHERE result = 'loss') as losses,
                 COUNT(*) FILTER (WHERE result = 'push') as pushes,
