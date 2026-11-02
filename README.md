@@ -86,7 +86,8 @@ Use `/api/status` from a port-forward. It is not a probe that should restart the
 
 | Metric | Meaning |
 | --- | --- |
-| `psuparlay_odds_api_last_call_ok` | `0` while the most recent Odds API call is failing (bad key, quota exhausted, outage), `1` after a success. Absent in mock mode. |
+| `psuparlay_odds_api_last_call_ok` | `0` while the most recent Odds API call is failing for a reason other than exhausted credits (bad key, outage, rate limit), `1` otherwise. Absent in mock mode. |
+| `psuparlay_odds_api_credits_exhausted` | `1` while the most recent call was rejected with `OUT_OF_USAGE_CREDITS`, `0` otherwise. Absent in mock mode. |
 | `psuparlay_odds_api_last_error_info{error_code}` | `1` with the Odds API error code (e.g. `INVALID_KEY`, `OUT_OF_USAGE_CREDITS`) while failing. |
 | `psuparlay_odds_api_last_success_timestamp_seconds` | Unix time of the last successful call. |
 | `psuparlay_odds_api_mock_mode` | `1` when `ODDS_API_KEY` is unset. |
@@ -97,10 +98,16 @@ Example alert:
 ```yaml
 - alert: OddsApiFailing
   expr: psuparlay_odds_api_last_call_ok == 0
-  for: 5m
+  for: 13h  # longer than the refresh interval, so one transient blip never pages
   labels: { severity: warning }
   annotations:
     summary: "Odds API calls failing ({{ $labels.error_code }})"
+- alert: OddsApiCreditsExhausted
+  expr: psuparlay_odds_api_credits_exhausted == 1
+  for: 5m
+  labels: { severity: critical }
+  annotations:
+    summary: "Odds API monthly credits are used up"
 - alert: OddsApiMockModeInProd
   expr: psuparlay_odds_api_mock_mode == 1
   for: 15m
