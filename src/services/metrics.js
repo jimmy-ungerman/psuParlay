@@ -35,15 +35,32 @@ new client.Gauge({
   collect() { this.set(isMockMode() ? 1 : 0); },
 });
 
+// Exhausted credits get their own gauge below so the two alerts don't page
+// for the same failure; last_call_ok covers everything else (bad key, outage).
+const CREDITS_EXHAUSTED_CODE = 'OUT_OF_USAGE_CREDITS';
+
 new client.Gauge({
   name: 'psuparlay_odds_api_last_call_ok',
-  help: '0 when the most recent The Odds API call failed (bad key, quota exhausted, outage); 1 after a success',
+  help: '0 when the most recent The Odds API call failed for a reason other than exhausted credits (bad key, outage, rate limit); 1 otherwise',
   registers: [registry],
   async collect() {
     this.remove();
     if (isMockMode()) return;
     const row = await readOddsRow();
-    this.set(row?.last_error_at ? 0 : 1);
+    const failing = row?.last_error_at && row.last_error_code !== CREDITS_EXHAUSTED_CODE;
+    this.set(failing ? 0 : 1);
+  },
+});
+
+new client.Gauge({
+  name: 'psuparlay_odds_api_credits_exhausted',
+  help: `1 when the most recent The Odds API call was rejected with ${CREDITS_EXHAUSTED_CODE}; 0 otherwise`,
+  registers: [registry],
+  async collect() {
+    this.remove();
+    if (isMockMode()) return;
+    const row = await readOddsRow();
+    this.set(row?.last_error_at && row.last_error_code === CREDITS_EXHAUSTED_CODE ? 1 : 0);
   },
 });
 

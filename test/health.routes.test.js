@@ -119,8 +119,19 @@ describe('GET /metrics', () => {
            VALUES (1, 0, 'INVALID_KEY', 'secret detail', CURRENT_TIMESTAMP)`);
     const { text } = await metrics();
     assert.match(text, /^psuparlay_odds_api_last_call_ok 0$/m);
+    assert.match(text, /^psuparlay_odds_api_credits_exhausted 0$/m);
     assert.match(text, /^psuparlay_odds_api_last_error_info\{error_code="INVALID_KEY"\} 1$/m);
     assert.doesNotMatch(text, /secret detail/);
+  });
+
+  test('reports exhausted credits separately from a failing call', async () => {
+    process.env.ODDS_API_KEY = 'spent';
+    query(`INSERT INTO odds_quota (id, remaining, last_error_code, last_error_message, last_error_at)
+           VALUES (1, 12, 'OUT_OF_USAGE_CREDITS', 'Usage quota has been reached', CURRENT_TIMESTAMP)`);
+    const { text } = await metrics();
+    assert.match(text, /^psuparlay_odds_api_credits_exhausted 1$/m);
+    assert.match(text, /^psuparlay_odds_api_last_call_ok 1$/m);
+    assert.match(text, /^psuparlay_odds_api_last_error_info\{error_code="OUT_OF_USAGE_CREDITS"\} 1$/m);
   });
 
   test('reports ok after a successful call', async () => {
